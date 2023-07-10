@@ -1,0 +1,114 @@
+------------Reading a row from internal table using Index----------------
+
+DATA: itab TYPE TABLE OF string.
+APPEND 'Meraj' TO itab.
+APPEND 'Zafir' TO itab.
+
+*option1
+*READ TABLE itab INTO DATA(lv_val) INDEX 2.
+*IF sy-subrc = 0.
+*  WRITE lv_val.
+*ENDIF.
+
+*option2
+data(lv_val) = itab[ 2 ].
+WRITE lv_val.
+
+-------------Read a table with key-----------------
+
+SELECT * from spfli
+  INTO TABLE @Data(itab).
+
+data(lv_val) = itab[ carrid = 'AA' ].
+WRITE: lv_val-carrid, lv_val-connid.
+
+
+--------------Check if line Exists in Table------------------------
+
+SELECT * FROM spfli
+  INTO TABLE @DATA(itab).
+
+IF line_exists( itab[ carrid = 'AA' ] ).
+  WRITE 'Yes Exists'.
+ENDIF.
+
+
+------------Get Table Index------------------------------------------
+
+SELECT * FROM spfli
+  INTO TABLE @DATA(itab).
+
+DATA(i_ndex) = line_index( itab[ connid = 0017 ] ).
+IF sy-subrc = 0.
+  WRITE: 'Indxe is ', i_ndex.
+ENDIF.
+
+
+----------------String Concatenation-------------------------------
+SELECT SINGLE carrid, connid
+  FROM spfli
+  INTO @data(lv_val)
+  WHERE carrid = 'AA'.
+
+CONCATENATE 'Ariline Code is ' lv_val-carrid ' and Airline Connection No. is ' lv_val-connid INTO data(line) SEPARATED BY space.
+
+WRITE line.
+
+
+----------------Chaining Opeartor-------------------------------------
+DATA: comm_capital TYPE bzusage VALUE '1234567.123',
+      curr_field   TYPE swhr,
+      lv_string    TYPE string,
+      amount TYPE p VALUE '98765.432'.
+
+lv_string = |{ comm_capital CURRENCY = curr_field NUMBER = user }|.
+WRITE lv_string.
+
+lv_string  = 'MeZa'(002) && ` ` && lv_string && |{ amount NUMBER = USER }|.
+WRITE lv_string.
+
+
+
+-------------------Alpha Formatting------------------
+DATA: lv_vbeln1 TYPE vbeln VALUE '0000012345'.
+****Remove leading Zeros
+lv_vbeln1  = |{ lv_vbeln1 ALPHA = OUT }|.
+WRITE lv_vbeln1.
+
+
+DATA: lv_vbeln2 TYPE vbeln VALUE '12345'.
+****Add Leading Zero
+lv_vbeln2  = |{ lv_vbeln2 ALPHA = In }|.
+WRITE / |{ lv_vbeln2 }|.
+
+
+------------------Conversion Operator---------------------
+DATA: name TYPE c LENGTH 20 VALUE 'Meraj Zafir'.
+
+data(lv_str) = CONV string( name ).
+
+
+---------------------Conditional Operator-----------------------
+data : num TYPE i VALUE 4.
+
+data(val) = COND i( WHEN num mod 2 EQ 0 THEN num ** 2
+                    WHEN num mod 3 EQ 0 THEN num ** 3
+                    ELSE 1
+                   ).
+
+WRITE val.
+
+
+--------------------Switch Operator------------------------------
+data num TYPE i VALUE 2.
+
+data(val) = SWITCH string( num
+                       WHEN 1 THEN 'one'
+                       WHEN 2 THEN 'two'
+                       WHEN 3 THEN 'three'
+                       ELSE 'None' ).
+
+WRITE val.
+
+
+
