@@ -1,0 +1,1559 @@
+Sample Code: ALV Report to display simple LIST_DISPLAY
+REPORT Z31_ALV.
+
+TYPES : BEGIN OF str_sfli,
+        CARRID  TYPE S_CARR_ID,
+        CONNID  TYPE S_CONN_ID,
+        FLDATE  TYPE S_DATE,
+        CURRENCY TYPE S_CURRCODE,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+        CARRID  TYPE S_CARR_ID,
+        COUNTRYFR TYPE LAND1,
+        CITYFROM  TYPE S_FROM_CIT,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+DATA : lt_fieldcat  TYPE SLIS_T_FIELDCAT_ALV.
+DATA : lt_final TYPE TABLE OF ZSTR_SFLI_SPF,
+       ls_final TYPE ZSTR_SFLI_SPF.
+
+DATA: lv_carrid TYPE S_CARR_ID.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid in s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+   SELECT carrid countryfr cityfrom
+   FROM spfli
+   INTO TABLE lt_spf
+   FOR ALL ENTRIES IN lt_sfli
+   WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+          ls_final-carrid = ls_sfli-carrid.
+          ls_final-connid = ls_sfli-connid.
+          ls_final-fldate = ls_sfli-fldate.
+          ls_final-currency = ls_sfli-currency.
+          ls_final-countryfr = ls_spf-countryfr.
+          ls_final-cityfrom = ls_spf-cityfrom.
+          APPEND ls_final to lt_final.
+          CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+ EXPORTING
+*   I_PROGRAM_NAME               =
+*   I_INTERNAL_TABNAME           =
+   I_STRUCTURE_NAME             = 'ZSTR_SFLI_SPF'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_INCLNAME                   =
+*   I_BYPASSING_BUFFER           =
+*   I_BUFFER_ACTIVE              =
+  CHANGING
+    ct_fieldcat                  = lt_fieldcat
+ EXCEPTIONS
+   INCONSISTENT_INTERFACE       = 1
+   PROGRAM_ERROR                = 2
+   OTHERS                       = 3
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK              = ' '
+*   I_BYPASSING_BUFFER             =
+*   I_BUFFER_ACTIVE                = ' '
+*   I_CALLBACK_PROGRAM             = ' '
+*   I_CALLBACK_PF_STATUS_SET       = ' '
+*   I_CALLBACK_USER_COMMAND        = ' '
+*   I_STRUCTURE_NAME               =
+*   IS_LAYOUT                      =
+   IT_FIELDCAT                    = lt_fieldcat
+*   IT_EXCLUDING                   =
+*   IT_SPECIAL_GROUPS              =
+*   IT_SORT                        =
+*   IT_FILTER                      =
+*   IS_SEL_HIDE                    =
+*   I_DEFAULT                      = 'X'
+*   I_SAVE                         = ' '
+*   IS_VARIANT                     =
+*   IT_EVENTS                      =
+*   IT_EVENT_EXIT                  =
+*   IS_PRINT                       =
+*   IS_REPREP_ID                   =
+*   I_SCREEN_START_COLUMN          = 0
+*   I_SCREEN_START_LINE            = 0
+*   I_SCREEN_END_COLUMN            = 0
+*   I_SCREEN_END_LINE              = 0
+*   IR_SALV_LIST_ADAPTER           =
+*   IT_EXCEPT_QINFO                =
+*   I_SUPPRESS_EMPTY_DATA          = ABAP_FALSE
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER        =
+*   ES_EXIT_CAUSED_BY_USER         =
+  TABLES
+    t_outtab                       = lt_final
+* EXCEPTIONS
+*   PROGRAM_ERROR                  = 1
+*   OTHERS                         = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+
+
+Sample Code: ALV Report to display simple GRID_DISPLAY
+REPORT Z31_ALV.
+
+TYPES : BEGIN OF str_sfli,
+        CARRID  TYPE S_CARR_ID,
+        CONNID  TYPE S_CONN_ID,
+        FLDATE  TYPE S_DATE,
+        CURRENCY TYPE S_CURRCODE,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+        CARRID  TYPE S_CARR_ID,
+        COUNTRYFR TYPE LAND1,
+        CITYFROM  TYPE S_FROM_CIT,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+DATA : lt_fieldcat  TYPE SLIS_T_FIELDCAT_ALV.
+DATA : lt_final TYPE TABLE OF ZSTR_SFLI_SPF,
+       ls_final TYPE ZSTR_SFLI_SPF.
+
+DATA: lv_carrid TYPE S_CARR_ID.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid in s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+   SELECT carrid countryfr cityfrom
+   FROM spfli
+   INTO TABLE lt_spf
+   FOR ALL ENTRIES IN lt_sfli
+   WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+          ls_final-carrid = ls_sfli-carrid.
+          ls_final-connid = ls_sfli-connid.
+          ls_final-fldate = ls_sfli-fldate.
+          ls_final-currency = ls_sfli-currency.
+          ls_final-countryfr = ls_spf-countryfr.
+          ls_final-cityfrom = ls_spf-cityfrom.
+          APPEND ls_final to lt_final.
+          CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+ EXPORTING
+*   I_PROGRAM_NAME               =
+*   I_INTERNAL_TABNAME           =
+   I_STRUCTURE_NAME             = 'ZSTR_SFLI_SPF'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_INCLNAME                   =
+*   I_BYPASSING_BUFFER           =
+*   I_BUFFER_ACTIVE              =
+  CHANGING
+    ct_fieldcat                  = lt_fieldcat
+ EXCEPTIONS
+   INCONSISTENT_INTERFACE       = 1
+   PROGRAM_ERROR                = 2
+   OTHERS                       = 3
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT                         =
+   IT_FIELDCAT                       = lt_fieldcat
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = lt_final
+ EXCEPTIONS
+   PROGRAM_ERROR                     = 1
+   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+
+
+Sample Code: Manually creating fieldcatalog in ALV Report 
+REPORT Z31_ALV.
+
+TYPES : BEGIN OF str_sfli,
+        CARRID  TYPE S_CARR_ID,
+        CONNID  TYPE S_CONN_ID,
+        FLDATE  TYPE S_DATE,
+        CURRENCY TYPE S_CURRCODE,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+        CARRID  TYPE S_CARR_ID,
+        COUNTRYFR TYPE LAND1,
+        CITYFROM  TYPE S_FROM_CIT,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat  TYPE SLIS_T_FIELDCAT_ALV,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+
+DATA : lt_final TYPE TABLE OF ZSTR_SFLI_SPF,
+       ls_final TYPE ZSTR_SFLI_SPF.
+
+DATA: lv_carrid TYPE S_CARR_ID.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid in s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+   SELECT carrid countryfr cityfrom
+   FROM spfli
+   INTO TABLE lt_spf
+   FOR ALL ENTRIES IN lt_sfli
+   WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+          ls_final-carrid = ls_sfli-carrid.
+          ls_final-connid = ls_sfli-connid.
+          ls_final-fldate = ls_sfli-fldate.
+          ls_final-currency = ls_sfli-currency.
+          ls_final-countryfr = ls_spf-countryfr.
+          ls_final-cityfrom = ls_spf-cityfrom.
+          APPEND ls_final to lt_final.
+          CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '5'.
+ls_fieldcat-fieldname = 'COUNTRYFR'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Country Key'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '6'.
+ls_fieldcat-fieldname = 'CITYFROM'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Departure city'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT                         =
+   IT_FIELDCAT                       = lt_fieldcat
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = lt_final
+ EXCEPTIONS
+   PROGRAM_ERROR                     = 1
+   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+
+
+Sample Code: Modify the Field Catalog Provided by REUSE_ALV_FIELDCATALOG_MERGE in ALV Report
+REPORT z31_alv.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lv_carrid TYPE s_carr_id.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+  EXPORTING
+*   I_PROGRAM_NAME         =
+*   I_INTERNAL_TABNAME     =
+    i_structure_name       = 'ZSTR_SFLI_SPF'
+*   I_CLIENT_NEVER_DISPLAY = 'X'
+*   I_INCLNAME             =
+*   I_BYPASSING_BUFFER     =
+*   I_BUFFER_ACTIVE        =
+  CHANGING
+    ct_fieldcat            = lt_fieldcat
+  EXCEPTIONS
+    inconsistent_interface = 1
+    program_error          = 2
+    OTHERS                 = 3.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+LOOP AT lt_fieldcat INTO ls_fieldcat.
+  IF ls_fieldcat-fieldname = 'CARRID'.
+    ls_fieldcat-col_pos = '2'.
+    MODIFY lt_fieldcat FROM ls_fieldcat TRANSPORTING col_pos.
+  ENDIF.
+  IF ls_fieldcat-fieldname = 'CONNID'.
+    ls_fieldcat-col_pos = '1'.
+    MODIFY lt_fieldcat FROM ls_fieldcat TRANSPORTING col_pos.
+  ENDIF.
+ENDLOOP.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE  =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT     =
+    it_fieldcat   = lt_fieldcat
+*   IT_EXCLUDING  =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT       =
+*   IT_FILTER     =
+*   IS_SEL_HIDE   =
+*   I_DEFAULT     = 'X'
+*   I_SAVE        = ' '
+*   IS_VARIANT    =
+*   IT_EVENTS     =
+*   IT_EVENT_EXIT =
+*   IS_PRINT      =
+*   IS_REPREP_ID  =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK  =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab      = lt_final
+  EXCEPTIONS
+    program_error = 1
+    OTHERS        = 2.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+
+
+
+
+
+Sample Code: Achieving Sorting Functionality through Coding in ALV
+TYPES : BEGIN OF str_sfli,
+        CARRID  TYPE S_CARR_ID,
+        CONNID  TYPE S_CONN_ID,
+        FLDATE  TYPE S_DATE,
+        CURRENCY TYPE S_CURRCODE,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+        CARRID  TYPE S_CARR_ID,
+        COUNTRYFR TYPE LAND1,
+        CITYFROM  TYPE S_FROM_CIT,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF ZSTR_SFLI_SPF,
+       ls_final TYPE ZSTR_SFLI_SPF.
+
+DATA : lt_fieldcat  TYPE SLIS_T_FIELDCAT_ALV,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA : lt_sort TYPE SLIS_T_SORTINFO_ALV,
+       ls_sort TYPE slis_sortinfo_alv.
+
+
+DATA: lv_carrid TYPE S_CARR_ID.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid in s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+   SELECT carrid countryfr cityfrom
+   FROM spfli
+   INTO TABLE lt_spf
+   FOR ALL ENTRIES IN lt_sfli
+   WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+          ls_final-carrid = ls_sfli-carrid.
+          ls_final-connid = ls_sfli-connid.
+          ls_final-fldate = ls_sfli-fldate.
+          ls_final-currency = ls_sfli-currency.
+          ls_final-countryfr = ls_spf-countryfr.
+          ls_final-cityfrom = ls_spf-cityfrom.
+          APPEND ls_final to lt_final.
+          CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '5'.
+ls_fieldcat-fieldname = 'COUNTRYFR'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Country Key'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '6'.
+ls_fieldcat-fieldname = 'CITYFROM'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Departure city'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_sort-fieldname = 'CARRID'.
+ls_sort-down = 'X'.
+APPEND ls_sort TO lt_sort.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT                         =
+   IT_FIELDCAT                       = lt_fieldcat
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+   IT_SORT                           = lt_sort
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = lt_final
+ EXCEPTIONS
+   PROGRAM_ERROR                     = 1
+   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIf.
+
+
+
+
+
+
+
+Sample Code: Achieving the Filtering Functionality through Coding in ALV
+REPORT z31_alv.
+
+TYPES : BEGIN OF str_sfli,
+        CARRID  TYPE S_CARR_ID,
+        CONNID  TYPE S_CONN_ID,
+        FLDATE  TYPE S_DATE,
+        CURRENCY TYPE S_CURRCODE,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+        CARRID  TYPE S_CARR_ID,
+        COUNTRYFR TYPE LAND1,
+        CITYFROM  TYPE S_FROM_CIT,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat  TYPE SLIS_T_FIELDCAT_ALV,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA : lt_filter TYPE SLIS_T_FILTER_ALV,
+       ls_filter TYPE slis_filter_alv.
+
+
+DATA : lt_final TYPE TABLE OF ZSTR_SFLI_SPF,
+       ls_final TYPE ZSTR_SFLI_SPF.
+
+DATA: lv_carrid TYPE S_CARR_ID.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid in s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+   SELECT carrid countryfr cityfrom
+   FROM spfli
+   INTO TABLE lt_spf
+   FOR ALL ENTRIES IN lt_sfli
+   WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+          ls_final-carrid = ls_sfli-carrid.
+          ls_final-connid = ls_sfli-connid.
+          ls_final-fldate = ls_sfli-fldate.
+          ls_final-currency = ls_sfli-currency.
+          ls_final-countryfr = ls_spf-countryfr.
+          ls_final-cityfrom = ls_spf-cityfrom.
+          APPEND ls_final to lt_final.
+          CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '5'.
+ls_fieldcat-fieldname = 'COUNTRYFR'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Country Key'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '6'.
+ls_fieldcat-fieldname = 'CITYFROM'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Departure city'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+
+ls_filter-fieldname = 'CARRID'.
+ls_filter-tabname  = 'lt_final'.
+ls_filter-sign0 = 'I'.
+ls_filter-optio = 'BT'.
+ls_filter-valuf_int = 'AA'.
+ls_filter-valut_int = 'AZ'.
+APPEND ls_filter TO lt_filter.
+CLEAR ls_filter.
+
+ls_filter-fieldname = 'COUNTRYFR'.
+ls_filter-tabname  = 'lt_final'.
+ls_filter-sign0 = 'E'.
+ls_filter-optio = 'EQ'.
+ls_filter-valuf_int = 'US'.
+APPEND ls_filter TO lt_filter.
+CLEAR ls_filter.
+
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT                         =
+   IT_FIELDCAT                       = lt_fieldcat
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+   IT_FILTER                         = lt_filter
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = lt_final
+ EXCEPTIONS
+   PROGRAM_ERROR                     = 1
+   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+
+
+
+
+
+Sample Code: ALV TOP-OF-PAGE
+REPORT z31_alv.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA : lt_list TYPE slis_t_listheader,
+       ls_list TYPE slis_listheader.
+
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+data lv_count TYPE string.
+DATA: lv_carrid TYPE s_carr_id.
+
+SELECT-OPTIONS : s_carrid FOR lv_carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '5'.
+ls_fieldcat-fieldname = 'COUNTRYFR'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Country Key'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '6'.
+ls_fieldcat-fieldname = 'CITYFROM'.
+ls_fieldcat-tabname = 'lt_final'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Departure city'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+*   I_INTERFACE_CHECK      = ' '
+*   I_BYPASSING_BUFFER     = ' '
+*   I_BUFFER_ACTIVE        = ' '
+    i_callback_program     = sy-repid
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+    i_callback_top_of_page = 'TOP_PAGE'
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME       =
+*   I_BACKGROUND_ID        = ' '
+*   I_GRID_TITLE           =
+*   I_GRID_SETTINGS        =
+*   IS_LAYOUT              =
+    it_fieldcat            = lt_fieldcat
+*   IT_EXCLUDING           =
+*   IT_SPECIAL_GROUPS      =
+*   IT_SORT                =
+*   IT_FILTER              =
+*   IS_SEL_HIDE            =
+*   I_DEFAULT              = 'X'
+*   I_SAVE                 = ' '
+*   IS_VARIANT             =
+*   IT_EVENTS              =
+*   IT_EVENT_EXIT          =
+*   IS_PRINT               =
+*   IS_REPREP_ID           =
+*   I_SCREEN_START_COLUMN  = 0
+*   I_SCREEN_START_LINE    = 0
+*   I_SCREEN_END_COLUMN    = 0
+*   I_SCREEN_END_LINE      = 0
+*   I_HTML_HEIGHT_TOP      = 0
+*   I_HTML_HEIGHT_END      = 0
+*   IT_ALV_GRAPHICS        =
+*   IT_HYPERLINK           =
+*   IT_ADD_FIELDCAT        =
+*   IT_EXCEPT_QINFO        =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER =
+  TABLES
+    t_outtab               = lt_final
+  EXCEPTIONS
+    program_error          = 1
+    OTHERS                 = 2.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+FORM top_page.
+
+  ls_list-typ = 'H'.
+  ls_list-info = 'Flight Information'.
+  APPEND ls_list TO lt_list.
+  clear ls_list.
+
+  CONCATENATE s_carrid-low 'to' s_carrid-high INTO DATA(lv_text) SEPARATED BY space.
+  ls_list-typ = 'S'.
+  ls_list-key = 'Airline Code'.
+  ls_list-info = lv_text.
+  APPEND ls_list TO lt_list.
+  clear ls_list.
+
+  DESCRIBE TABLE lt_final LINES lv_count.
+  CONCATENATE 'No. of records :' ` ` lv_count INTO data(lv_text2) SEPARATED BY space.
+  ls_list-typ = 'A'.
+  ls_list-info = lv_text2.
+  APPEND ls_list TO lt_list.
+  clear ls_list.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = lt_list
+*     I_LOGO             =
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+
+ENDFORM.
+
+
+
+
+
+
+
+
+Sample Code: PF-Status and User Command in ALV Report
+REPORT z31_int_alv.
+
+TABLES: sflight.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+DATA : lt_fieldcat1 TYPE slis_t_fieldcat_alv,
+       ls_fieldcat1 TYPE slis_fieldcat_alv.
+DATA ls_layout TYPE SLIS_LAYOUT_ALV.
+
+
+SELECT-OPTIONS: s_carrid FOR sflight-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_layout-colwidth_optimize = 'X'. "To Display Full Column Label
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+*   I_INTERFACE_CHECK        = ' '
+*   I_BYPASSING_BUFFER       = ' '
+*   I_BUFFER_ACTIVE          = ' '
+    i_callback_program       = sy-repid
+    i_callback_pf_status_set = 'PF_STATUS'
+    i_callback_user_command  = 'USR_COMMAND'
+*   I_CALLBACK_TOP_OF_PAGE   = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME         =
+*   I_BACKGROUND_ID          = ' '
+*   I_GRID_TITLE             =
+*   I_GRID_SETTINGS          =
+   IS_LAYOUT                = ls_layout
+    it_fieldcat              = lt_fieldcat
+*   IT_EXCLUDING             =
+*   IT_SPECIAL_GROUPS        =
+*   IT_SORT                  =
+*   IT_FILTER                =
+*   IS_SEL_HIDE              =
+*   I_DEFAULT                = 'X'
+*   I_SAVE                   = ' '
+*   IS_VARIANT               =
+*   IT_EVENTS                =
+*   IT_EVENT_EXIT            =
+*   IS_PRINT                 =
+*   IS_REPREP_ID             =
+*   I_SCREEN_START_COLUMN    = 0
+*   I_SCREEN_START_LINE      = 0
+*   I_SCREEN_END_COLUMN      = 0
+*   I_SCREEN_END_LINE        = 0
+*   I_HTML_HEIGHT_TOP        = 0
+*   I_HTML_HEIGHT_END        = 0
+*   IT_ALV_GRAPHICS          =
+*   IT_HYPERLINK             =
+*   IT_ADD_FIELDCAT          =
+*   IT_EXCEPT_QINFO          =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER  =
+*   ES_EXIT_CAUSED_BY_USER   =
+  TABLES
+    t_outtab                 = lt_sfli
+  EXCEPTIONS
+    program_error            = 1
+    OTHERS                   = 2.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'AIRLINE'.
+ENDFORM.
+
+FORM usr_command  USING r_ucomm LIKE sy-ucomm
+                                  rs_selfield TYPE slis_selfield.
+
+  READ TABLE lt_sfli INTO data(lv_carrid) INDEX RS_SELFIELD-TABINDEX.
+
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  WHERE carrid = lv_carrid.
+
+  REFRESH lt_fieldcat1.
+
+  ls_fieldcat1-col_pos = '1'.
+  ls_fieldcat1-fieldname = 'CARRID'.
+  ls_fieldcat1-tabname = 'lt_sfli'. "Internal Table containg all the data
+  ls_fieldcat1-seltext_l = 'Airline Code'.
+  APPEND ls_fieldcat1 TO lt_fieldcat1.
+  CLEAR ls_fieldcat1.
+
+  ls_fieldcat1-col_pos = '2'.
+  ls_fieldcat1-fieldname = 'COUNTRYFR'.
+  ls_fieldcat1-tabname = 'lt_final'. "Internal Table containg all the data
+  ls_fieldcat1-seltext_l = 'Country Key'.
+  APPEND ls_fieldcat1 TO lt_fieldcat1.
+  CLEAR ls_fieldcat1.
+
+  ls_fieldcat1-col_pos = '3'.
+  ls_fieldcat1-fieldname = 'CITYFROM'.
+  ls_fieldcat1-tabname = 'lt_final'. "Internal Table containg all the data
+  ls_fieldcat1-seltext_l = 'Departure city'.
+  APPEND ls_fieldcat1 TO lt_fieldcat1.
+  CLEAR ls_fieldcat1.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+*     I_CALLBACK_PROGRAM                = ' '
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE                      =
+*     I_GRID_SETTINGS                   =
+*     IS_LAYOUT                         =
+     IT_FIELDCAT                       = lt_fieldcat1
+*     IT_EXCLUDING                      =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT                           =
+*     IT_FILTER                         =
+*     IS_SEL_HIDE                       =
+*     I_DEFAULT                         = 'X'
+*     I_SAVE                            = ' '
+*     IS_VARIANT                        =
+*     IT_EVENTS                         =
+*     IT_EVENT_EXIT                     =
+*     IS_PRINT                          =
+*     IS_REPREP_ID                      =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK                      =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      t_outtab                          = lt_spf
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+            .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+ENDFORM.
+
+
+
+
+
+
+
+Sample Code: ALV Hotspot Functionality
+REPORT z31_int_alv.
+
+TABLES: sflight.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+DATA : lt_fieldcat1 TYPE slis_t_fieldcat_alv,
+       ls_fieldcat1 TYPE slis_fieldcat_alv.
+DATA ls_layout TYPE slis_layout_alv.
+
+
+SELECT-OPTIONS: s_carrid FOR sflight-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+
+ls_fieldcat-col_pos = '1'.
+ls_fieldcat-fieldname = 'CARRID'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Airline Code'.
+ls_fieldcat-hotspot = 'X'. "This will make the column as hyperlink where we can add some functionality
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '2'.
+ls_fieldcat-fieldname = 'CONNID'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight Connection Number'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '3'.
+ls_fieldcat-fieldname = 'FLDATE'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Flight date'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_fieldcat-col_pos = '4'.
+ls_fieldcat-fieldname = 'CURRENCY'.
+ls_fieldcat-tabname = 'lt_sfli'. "Internal Table containg all the data
+ls_fieldcat-seltext_l = 'Local currency of airline'.
+APPEND ls_fieldcat TO lt_fieldcat.
+CLEAR ls_fieldcat.
+
+ls_layout-colwidth_optimize = 'X'. "To Display Full Column Label
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+*   I_INTERFACE_CHECK        = ' '
+*   I_BYPASSING_BUFFER       = ' '
+*   I_BUFFER_ACTIVE          = ' '
+    i_callback_program       = sy-repid
+    i_callback_pf_status_set = 'PF_STATUS'
+    i_callback_user_command  = 'USR_COMMAND'
+*   I_CALLBACK_TOP_OF_PAGE   = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME         =
+*   I_BACKGROUND_ID          = ' '
+*   I_GRID_TITLE             =
+*   I_GRID_SETTINGS          =
+    is_layout                = ls_layout
+    it_fieldcat              = lt_fieldcat
+*   IT_EXCLUDING             =
+*   IT_SPECIAL_GROUPS        =
+*   IT_SORT                  =
+*   IT_FILTER                =
+*   IS_SEL_HIDE              =
+*   I_DEFAULT                = 'X'
+*   I_SAVE                   = ' '
+*   IS_VARIANT               =
+*   IT_EVENTS                =
+*   IT_EVENT_EXIT            =
+*   IS_PRINT                 =
+*   IS_REPREP_ID             =
+*   I_SCREEN_START_COLUMN    = 0
+*   I_SCREEN_START_LINE      = 0
+*   I_SCREEN_END_COLUMN      = 0
+*   I_SCREEN_END_LINE        = 0
+*   I_HTML_HEIGHT_TOP        = 0
+*   I_HTML_HEIGHT_END        = 0
+*   IT_ALV_GRAPHICS          =
+*   IT_HYPERLINK             =
+*   IT_ADD_FIELDCAT          =
+*   IT_EXCEPT_QINFO          =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER  =
+*   ES_EXIT_CAUSED_BY_USER   =
+  TABLES
+    t_outtab                 = lt_sfli
+  EXCEPTIONS
+    program_error            = 1
+    OTHERS                   = 2.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'AIRLINE'.
+ENDFORM.
+
+FORM usr_command  USING r_ucomm LIKE sy-ucomm
+                                  rs_selfield TYPE slis_selfield.
+  IF r_ucomm = 'DISPLAY'.
+
+    READ TABLE lt_sfli INTO DATA(lv_carrid) INDEX rs_selfield-tabindex.
+
+    SELECT carrid countryfr cityfrom
+    FROM spfli
+    INTO TABLE lt_spf
+    WHERE carrid = lv_carrid.
+
+    REFRESH lt_fieldcat1.
+
+    ls_fieldcat1-col_pos = '1'.
+    ls_fieldcat1-fieldname = 'CARRID'.
+    ls_fieldcat1-tabname = 'lt_sfli'. "Internal Table containg all the data
+    ls_fieldcat1-seltext_l = 'Airline Code'.
+    APPEND ls_fieldcat1 TO lt_fieldcat1.
+    CLEAR ls_fieldcat1.
+
+    ls_fieldcat1-col_pos = '2'.
+    ls_fieldcat1-fieldname = 'COUNTRYFR'.
+    ls_fieldcat1-tabname = 'lt_final'. "Internal Table containg all the data
+    ls_fieldcat1-seltext_l = 'Country Key'.
+    APPEND ls_fieldcat1 TO lt_fieldcat1.
+    CLEAR ls_fieldcat1.
+
+    ls_fieldcat1-col_pos = '3'.
+    ls_fieldcat1-fieldname = 'CITYFROM'.
+    ls_fieldcat1-tabname = 'lt_final'. "Internal Table containg all the data
+    ls_fieldcat1-seltext_l = 'Departure city'.
+    APPEND ls_fieldcat1 TO lt_fieldcat1.
+    CLEAR ls_fieldcat1.
+
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+      EXPORTING
+*       I_INTERFACE_CHECK                 = ' '
+*       I_BYPASSING_BUFFER                = ' '
+*       I_BUFFER_ACTIVE                   = ' '
+*       I_CALLBACK_PROGRAM                = ' '
+*       I_CALLBACK_PF_STATUS_SET          = ' '
+*       I_CALLBACK_USER_COMMAND           = ' '
+*       I_CALLBACK_TOP_OF_PAGE            = ' '
+*       I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*       I_CALLBACK_HTML_END_OF_LIST       = ' '
+*       I_STRUCTURE_NAME                  =
+*       I_BACKGROUND_ID                   = ' '
+*       I_GRID_TITLE                      =
+*       I_GRID_SETTINGS                   =
+*       IS_LAYOUT   =
+        it_fieldcat = lt_fieldcat1
+*       IT_EXCLUDING                      =
+*       IT_SPECIAL_GROUPS                 =
+*       IT_SORT     =
+*       IT_FILTER   =
+*       IS_SEL_HIDE =
+*       I_DEFAULT   = 'X'
+*       I_SAVE      = ' '
+*       IS_VARIANT  =
+*       IT_EVENTS   =
+*       IT_EVENT_EXIT                     =
+*       IS_PRINT    =
+*       IS_REPREP_ID                      =
+*       I_SCREEN_START_COLUMN             = 0
+*       I_SCREEN_START_LINE               = 0
+*       I_SCREEN_END_COLUMN               = 0
+*       I_SCREEN_END_LINE                 = 0
+*       I_HTML_HEIGHT_TOP                 = 0
+*       I_HTML_HEIGHT_END                 = 0
+*       IT_ALV_GRAPHICS                   =
+*       IT_HYPERLINK                      =
+*       IT_ADD_FIELDCAT                   =
+*       IT_EXCEPT_QINFO                   =
+*       IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*       E_EXIT_CAUSED_BY_CALLER           =
+*       ES_EXIT_CAUSED_BY_USER            =
+      TABLES
+        t_outtab    = lt_spf
+*   EXCEPTIONS
+*       PROGRAM_ERROR                     = 1
+*       OTHERS      = 2
+      .
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+    ENDIF.
+  ENDIF.
+
+  IF r_ucomm = '&IC1'.
+
+    SET PARAMETER ID 'CAR' FIELD rs_selfield-value. "SAP Memory Concept
+    CALL TRANSACTION 'ZAIR'.
+
+  ENDIF.
+
+ENDFORM.
+
+
+
