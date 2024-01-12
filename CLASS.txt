@@ -1,0 +1,440 @@
+Sample Code: Class to display Airline Details
+  method DISPLAY.
+
+    SELECT SINGLE CONNID FLDATE
+    FROM SFLIGHT
+    INTO ( PCONNID, PFLDATE )
+    WHERE CARRID EQ PCARRID.
+
+    IF SY-SUBRC <> 0.
+      RAISE WRONG_INPUT.
+    ENDIF.
+
+  endmethod.
+
+
+REPORT Z31_PGM_CL.
+
+DATA: lo_object TYPE REF TO Z31_CL1.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+CREATE OBJECT lo_object.
+
+CALL METHOD lo_object->display
+  EXPORTING
+    pcarrid     = p_carrid
+  IMPORTING
+    pconnid     = data(lv_connid)
+    pfldate     = data(lv_fldate)
+  EXCEPTIONS
+    wrong_input = 1
+    others      = 2
+        .
+IF sy-subrc <> 0.
+  MESSAGE 'Invalid Input' TYPE 'E'.
+ELSE.
+  WRITE : / lv_connid,
+          / lv_fldate.
+ENDIF.
+
+
+
+
+
+Sample Code: Static Method
+REPORT z31_pgm_cl.
+
+DATA: lo_object TYPE REF TO z31_cl1.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+CALL METHOD z31_cl1=>display
+  EXPORTING
+    pcarrid     = p_carrid
+  importing
+    pconnid     = data(lv_connid)
+    pfldate     = data(lv_fldate)
+  EXCEPTIONS
+    wrong_input = 1
+    OTHERS      = 2.
+
+IF sy-subrc <> 0.
+  MESSAGE 'Invalid Input' TYPE 'E'.
+ELSE.
+  WRITE : / lv_connid,
+          / lv_fldate.
+ENDIF.
+
+
+
+
+ 
+
+Sample Code: Local Class Program
+REPORT z31_pgm_cl.
+
+DATA: lv_connid TYPE s_conn_id,
+      lv_fldate TYPE s_date.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+  METHODS DISPLAY IMPORTING pcarrid TYPE s_carr_id
+                  EXPORTING pconnid TYPE s_conn_id
+                            pfldate TYPE s_date
+                  EXCEPTIONS wrong_input.
+
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+    select single connid fldate
+    FROM sflight
+    INTO ( lv_connid, lv_fldate )
+    WHERE carrid = pcarrid.
+
+    IF sy-subrc <> 0.
+      RAISE wrong_input.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+
+START-OF-SELECTION.
+DATA lo_object TYPE REF TO class1.
+CREATE OBJECT lo_object.
+lo_object->display( EXPORTING pcarrid = p_carrid
+                    IMPORTING pconnid = lv_connid pfldate = lv_fldate
+                    EXCEPTIONS wrong_input = 1 ).
+
+IF sy-subrc <> 0.
+  MESSAGE 'Invalid Input' TYPE 'E'.
+ELSE.
+  WRITE : / lv_connid,
+            lv_fldate.
+ENDIF.
+
+
+
+
+
+
+Sample Code: Static Method in Local Class
+REPORT z31_pgm_cl.
+
+DATA: lv_connid TYPE s_conn_id,
+      lv_fldate TYPE s_date.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+  CLASS-METHODS DISPLAY IMPORTING pcarrid TYPE s_carr_id
+                  EXPORTING pconnid TYPE s_conn_id
+                            pfldate TYPE s_date
+                  EXCEPTIONS wrong_input.
+
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+    select single connid fldate
+    FROM sflight
+    INTO ( lv_connid, lv_fldate )
+    WHERE carrid = pcarrid.
+
+    IF sy-subrc <> 0.
+      RAISE wrong_input.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+
+START-OF-SELECTION.
+*DATA lo_object TYPE REF TO class1.
+*CREATE OBJECT lo_object.
+class1=>display( EXPORTING pcarrid = p_carrid
+                    IMPORTING pconnid = lv_connid pfldate = lv_fldate
+                    EXCEPTIONS wrong_input = 1 ).
+
+IF sy-subrc <> 0.
+  MESSAGE 'Invalid Input' TYPE 'E'.
+ELSE.
+  WRITE : / lv_connid,
+            lv_fldate.
+ENDIF.
+
+
+
+
+
+
+Sample Code: Final Class
+REPORT z31_pgm_cl.
+
+DATA: lv_connid TYPE s_conn_id,
+      lv_fldate TYPE s_date.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+CLASS class1 DEFINITION FINAL.
+  PUBLIC SECTION.
+  CLASS-METHODS DISPLAY IMPORTING pcarrid TYPE s_carr_id
+                  EXPORTING pconnid TYPE s_conn_id
+                            pfldate TYPE s_date
+                  EXCEPTIONS wrong_input.
+
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+    select single connid fldate
+    FROM sflight
+    INTO ( lv_connid, lv_fldate )
+    WHERE carrid = pcarrid.
+
+    IF sy-subrc <> 0.
+      RAISE wrong_input.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+
+START-OF-SELECTION.
+DATA lo_object TYPE REF TO class1.
+CREATE OBJECT lo_object.
+lo_object->display( EXPORTING pcarrid = p_carrid
+                    IMPORTING pconnid = lv_connid pfldate = lv_fldate
+                    EXCEPTIONS wrong_input = 1 ).
+
+IF sy-subrc <> 0.
+  MESSAGE 'Invalid Input' TYPE 'E'.
+ELSE.
+  WRITE : / lv_connid,
+            lv_fldate.
+ENDIF.
+
+
+
+
+
+
+
+Sample Code: Local Abstract Class
+REPORT Z31_ABS_CL.
+
+PARAMETERS: P_CARRID TYPE S_CARR_ID.
+
+
+CLASS abs_class DEFINITION ABSTRACT.
+
+  PUBLIC SECTION.
+  METHODS display ABSTRACT IMPORTING pcarrid TYPE s_carr_id
+                           EXPORTING pconnid TYPE s_conn_id
+                                     pfldate TYPE s_date.
+ENDCLASS.
+
+CLASS child_class DEFINITION INHERITING FROM abs_class.
+
+  PUBLIC SECTION.
+  METHODS display REDEFINITION.
+
+ENDCLASS.
+
+CLASS child_class IMPLEMENTATION.
+
+  METHOD display.
+    SELECT SINGLE connid fldate
+    FROM sflight
+    INTO ( pconnid, pfldate )
+    where carrid = pcarrid.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+START-OF-SELECTION.
+DATA lo_subcls TYPE REF TO child_class.
+CREATE OBJECT lo_subcls.
+
+lo_subcls->display( EXPORTING pcarrid = p_carrid IMPORTING pconnid = data(lv_connid) pfldate = data(lv_date) ).
+
+WRITE : / lv_connid,
+          lv_date.
+
+
+
+
+
+
+
+Sample Code: Local Interface Program
+REPORT Z31_INTF_CL.
+
+DATA: lv_connid TYPE s_conn_id,
+      lv_date TYPE s_date.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+INTERFACE local_intf.
+  METHODS display IMPORTING pcarrid TYPE s_carr_id
+                  EXPORTING pconnid TYPE s_conn_id
+                            pfldate TYPE s_date.
+ENDINTERFACE.
+
+CLASS local_cl DEFINITION.
+  PUBLIC SECTION.
+  INTERFACES local_intf.
+ENDCLASS.
+
+CLASS local_cl IMPLEMENTATION.
+  METHOD local_intf~display.
+
+    select SINGLE connid fldate
+      FROM sflight
+      INTO ( pconnid, pfldate )
+      WHERE carrid = pcarrid.
+
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+DATA lo_object TYPE REF TO local_cl.
+CREATE OBJECT lo_object.
+
+lo_object->local_intf~display( EXPORTING pcarrid = p_carrid IMPORTING pconnid = lv_connid pfldate = lv_date ).
+
+WRITE: / lv_connid,
+         lv_date.
+
+
+
+
+
+
+
+
+Sample Code: Event in Local Class
+REPORT Z31_PGM2_CL.
+
+PARAMETERS P_CARRID TYPE S_CARR_ID.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+  METHODS display IMPORTING pcarrid TYPE s_carr_id
+                  EXPORTING pconnid TYPE s_conn_id
+                            pfldate TYPE s_date.
+
+  EVENTS: no_input, wrong_input.
+
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display. "Triggering Method
+
+    if pcarrid IS INITIAL.
+
+      RAISE EVENT no_input.
+    ELSE.
+      select SINGLE connid fldate
+        FROM sflight
+        INTO ( pconnid, pfldate )
+        WHERE carrid = pcarrid.
+
+        IF sy-subrc <> 0.
+            RAISE EVENT wrong_input.
+        ENDIF.
+    ENDIF.
+
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS class2 DEFINITION.
+  PUBLIC SECTION.
+  METHODS: message FOR EVENT no_input of class1, "through this message method is getting called in method display of class1
+           msg FOR EVENT wrong_input of class1.
+
+ENDCLASS.
+
+CLASS class2 IMPLEMENTATION.
+  METHOD message. "Event Handler Method
+    WRITE 'Please Enter Airline Code'.
+  ENDMETHOD.
+
+  METHOD msg.
+    WRITE 'Please Enter Valid Airline Code'.
+  ENDMETHOD.
+ENDCLASS.
+
+
+START-OF-SELECTION.
+DATA lo_obj1 TYPE REF TO class1.
+create OBJECT lo_obj1.
+
+DATA lo_obj2 TYPE REF TO class2.
+CREATE OBJECT lo_obj2.
+
+IF p_carrid is INITIAL.
+  SET HANDLER lo_obj2->message FOR lo_obj1. "Registering the Event Handler Method.
+ELSE.
+  SET HANDLER lo_obj2->msg FOR lo_obj1.
+ENDIF.
+
+
+
+lo_obj1->display( EXPORTING pcarrid = p_carrid
+                  IMPORTING pconnid = data(lv_conn) pfldate = data(lv_date) ).
+
+WRITE: / p_carrid,
+       / lv_conn,
+       / lv_date.
+
+
+
+
+
+
+
+Sample Code: Significance of ME Keyword
+REPORT z31_pgm_cl.
+
+CLASS class1 DEFINITION.
+
+  PUBLIC SECTION.
+  DATA lv_var TYPE STRING VALUE 'MERAJ'.  "Class Variable
+  METHODS display.
+
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+
+    DATA lv_var TYPE STRING VALUE 'ZAFIR'. "Method Variable
+    WRITE / lv_var.
+    WRITE / ME->lv_var.
+
+  ENDMETHOD.
+ENDCLASS.
+
+
+START-OF-SELECTION.
+DATA lo_obj TYPE REF TO class1.
+CREATE OBJECT lo_obj.
+
+lo_obj->display( ).
+
+
+
+
+
+
+
