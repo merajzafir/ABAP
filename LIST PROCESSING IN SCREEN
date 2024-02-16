@@ -1,0 +1,58 @@
+LEAVE TO LIST-PROCESSING :  This statement is used when we are processing a screen and want to print our output in a list. To navigate from a screen to list LEAVE TO LIST-PROCESSING statement is used with some conditions.
+SUPPRESS DIALOG :If this statement is specified during PBO processing, the current dynpro is processed without displaying the screen, while the screen of the previous dynpro remains visible. After PBO processing, the system triggers the event PAI in the same way as if a user had pressed Enter.
+
+
+REPORT z31_dummy.
+
+TABLES: scarr.
+
+DATA: wa   TYPE spfli,
+      itab TYPE TABLE OF spfli.
+
+CALL SCREEN 9999.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9999  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9999 OUTPUT.
+  SET PF-STATUS 'PFSTATUS'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9999  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9999 INPUT.
+  IF SY-UCOMM = 'BACK' OR SY-UCOMM = 'EXIT' OR SY-UCOMM = 'CANCEL'.
+    LEAVE PROGRAM.
+  ENDIF.
+  CALL SCREEN 9998.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9998  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9998 OUTPUT.
+
+    SUPPRESS DIALOG.
+    IF scarr-carrid IS NOT INITIAL.
+
+    SELECT * FROM spfli
+      INTO TABLE itab
+      WHERE carrid = scarr-carrid.
+    IF itab IS NOT INITIAL.
+      LOOP AT itab INTO wa.
+        WRITE: / wa-carrid,
+                 wa-connid,
+                 wa-countryfr,
+                 wa-countryto.
+      ENDLOOP.
+    ENDIF.
+    LEAVE TO LIST-PROCESSING AND RETURN TO SCREEN 0.
+    
+  ENDIF.
+
+
+ENDMODULE.
