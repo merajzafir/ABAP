@@ -83,5 +83,30 @@ AT SELECTION-SCREEN OUTPUT.
 
 
 
+
+
+Sample Code: AT SELECTION-SCREEN ON VALUE-REQUEST
+REPORT Z31_P4.
+"NOTE: If there is a select-option field, then this event has to be written twice i.e. one for field-low and another for field-high.
+
+PARAMETERS: p_carrid(3) TYPE c.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_carrid.
+select carrid from scarr
+  INTO TABLE @data(itdata).
+
+CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+  EXPORTING
+    retfield               = 'CARRID'
+   DYNPPROG               = SY-REPID
+   DYNPNR                 = SY-DYNNR
+   DYNPROFIELD            = 'p_carrid'
+   VALUE_ORG              = 'S'
+  tables
+    value_tab              = itdata.
+
+
+
+
 Sample Code:
 
