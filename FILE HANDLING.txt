@@ -1,0 +1,178 @@
+*********************Reading data from file on Presentation Server
+REPORT Z31_FH1.
+
+PARAMETERS: p_file TYPE localfile.
+DATA lv_file TYPE string.
+
+TYPES: BEGIN OF str,
+  carrid TYPE s_carr_id,
+  carrname TYPE s_carrname,
+  END OF str.
+DATA: wa TYPE str,
+      itab TYPE TABLE OF str.
+
+AT SELECTION-SCREEN on VALUE-REQUEST FOr p_file.
+
+CALL FUNCTION 'F4_FILENAME'     "This FM gives the pop-up of the file explorer and returns the path of the chosen file.
+ EXPORTING
+   PROGRAM_NAME        = SYST-CPROG
+   DYNPRO_NUMBER       = SYST-DYNNR
+   FIELD_NAME          = ' '
+ IMPORTING
+   FILE_NAME           =  p_file
+          .
+
+START-OF-SELECTION.
+lv_file = p_file.
+CALL FUNCTION 'GUI_UPLOAD'
+  EXPORTING
+    filename                      = lv_file
+*   FILETYPE                      = 'ASC'
+   HAS_FIELD_SEPARATOR           = 'X'
+*   HEADER_LENGTH                 = 0
+*   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+  tables
+    data_tab                      = itab
+          .
+
+LOOP AT itab INTO wa.
+  WRITE: / wa-carrid,
+           wa-carrname.
+ENDLOOP.
+
+
+
+
+
+
+
+
+
+***************************Writing data into file on Presentation Server
+REPORT z31_fh2.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+TYPES: BEGIN OF str,
+         carrid  TYPE s_carr_id,
+         connid  TYPE s_conn_id,
+         fltime  TYPE s_fltime,
+         deptime TYPE s_dep_time,
+       END OF str.
+DATA: wa   TYPE str,
+      itab TYPE TABLE OF str.
+
+SELECT carrid connid fltime deptime
+  FROM spfli
+  INTO TABLE itab
+where carrid = p_carrid.
+
+CALL FUNCTION 'GUI_DOWNLOAD'
+  EXPORTING
+*   BIN_FILESIZE                    =
+    filename                        = 'C:\Users\M01854\OneDrive - Uniper SE\Desktop\airline_schedule.txt'
+*   FILETYPE                        = 'ASC'
+*   APPEND                          = ' '
+   WRITE_FIELD_SEPARATOR           = 'X'
+*   HEADER                          = '00'
+*   TRUNC_TRAILING_BLANKS           = ' '
+* IMPORTING
+*   FILELENGTH                      =
+  tables
+    data_tab                        = itab   .
+
+
+
+
+
+
+
+
+
+***********************Writing Data into File on SAP Server
+REPORT Z31_FH3.
+
+PARAMETERS: p_carrid TYPE s_carr_id.
+
+DATA lv_filename(20) TYPE c VALUE '/tmp/airline.txt'. "Declared the SAP directory in which we write the data into File
+DATA lv_string TYPE string.
+
+TYPES: BEGIN OF str,
+         carrid  TYPE s_carr_id,
+         connid  TYPE s_conn_id,
+         deptime TYPE s_dep_time,
+       END OF str.
+DATA: wa   TYPE str,
+      itab TYPE TABLE OF str.
+
+SELECT carrid connid deptime
+  FROM spfli
+  INTO TABLE itab
+where carrid = p_carrid.
+
+OPEN DATASET lv_filename FOR OUTPUT IN TEXT MODE ENCODING DEFAULT.
+IF SY-SUBRC = 0.
+  LOOP AT itab INTO wa.
+    CONCATENATE wa-carrid wa-connid wa-deptime INTO lv_string SEPARATED BY space.
+    TRANSFER lv_string TO lv_filename.
+  ENDLOOP.
+  CLOSE DATASET lv_filename.
+ENDIF.
+
+
+
+
+
+
+
+
+
+
+
+*************************READING DATA FROM A FILE ON SAP SERVER
+REPORT Z31_FH4.
+
+DATA lv_filename(20) TYPE c VALUE '/tmp/airline.txt'. "Declared the SAP directory in which we write the data into File
+DATA lv_string TYPE string.
+
+TYPES: BEGIN OF str,
+         carrid  TYPE s_carr_id,
+         connid  TYPE s_conn_id,
+         deptime TYPE s_dep_time,
+       END OF str.
+DATA: wa   TYPE str,
+      itab TYPE TABLE OF str.
+
+
+OPEN DATASET lv_filename FOR INPUT IN TEXT MODE ENCODING DEFAULT.
+IF SY-SUBRC = 0.
+  DO.
+    READ DATASET lv_filename INTO lv_string.
+    IF sy-subrc <> 0.
+      EXIT.
+    ENDIF.
+    SPLIT lv_string AT space INTO wa-carrid wa-connid wa-deptime.
+    APPEND wa to itab.
+    CLEAr wa.
+  ENDDO.
+  CLOSE DATASET lv_filename.
+ENDIF.
+
+LOOP AT itab INTO wa.
+  WRITE: / wa-carrid,
+           wa-connid,
+           wa-deptime.
+ENDLOOP.
+
+
+
