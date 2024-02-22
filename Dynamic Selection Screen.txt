@@ -92,7 +92,7 @@ REPORT Z31_P4.
 PARAMETERS: p_carrid(3) TYPE c.
 
 AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_carrid.
-select carrid from scarr
+select carrid, carrname from scarr
   INTO TABLE @data(itdata).
 
 CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
