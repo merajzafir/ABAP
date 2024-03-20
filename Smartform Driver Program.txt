@@ -95,7 +95,7 @@ CALL FUNCTION 'CONVERT_OTF'
 *   MODIFIED_PARAM_TABLE        =
   IMPORTING
 *   BIN_FILESIZE                =
-    bin_file = lv_bin_file " Getting the file in Binary Format
+    bin_file = lv_bin_file        " Getting the BIN_FILE
   TABLES
     otf      = ls_job_output_info-otfdata "Passing OTF of the Smartform
     lines    = lt_lines_pdf "Getting PDF as lines in the Inteernal Table
@@ -112,7 +112,7 @@ ENDIF.
 
 ****************************************************EMAIL FUNCTIONALITY"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'       "Converting BIN_FILE from XSTRING Format to Binary Format
   EXPORTING
     buffer     = lv_bin_file
 *   APPEND_TO_TABLE       = ' '
