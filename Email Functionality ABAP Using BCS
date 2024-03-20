@@ -1,0 +1,188 @@
+*&---------------------------------------------------------------------*
+*&  Include  ZEMAIL_PROGRAM
+*&---------------------------------------------------------------------*
+*SAP have provided standard classes related to Business Communication Services (BCS).
+*•  CL_BCS  This class is used for creating the send request, adding the mail recipient, sending the document, etc.
+*•  CL_DOCUMENT_BCS  This class is used for creating the document (subject/mail body), adding attachement, etc.
+*•  CL_SAPUSER_BCS  This class is used to create SAP Users.
+*•  CL_CAM_ADDRESS_BCS  This class is used to create the external recipient/internet address.
+* STEPS
+*2.	Convert the BIN_FILE from XSTRING Format to Binary FormatFM: SCMS_XSTRING_TO_BINARY
+*3.	Create the Send Request.  cl_bcs=>create_persistent
+*4.	Create the SAP User.   cl_sapuser_bcs=>create
+*5.	Create the External Recipient.  cl_cam_address_bcs=>create_internet_address
+*6.	Add the Recipient  lo_bcs->add_recipient
+*7.	Create the Document.  cl_document_bcs=>create_document
+*8.	Add the Attachment.  lo_document->add_attachment
+*9.	Sets the Document to be sent.  linking the CL_DOCUMENT_BCS to CL_BCS
+*10.  Activate/Deactivate Immediate Sending.  lo_bcs->set_send_immediately
+*11.  Send.  lo_bcs->send
+*12.  Commit Work It is only required if we are sending the mail to external recipient.
+*SBWP  T-CODE To Check Mail Box
+*SOST  T-CODE to used to view the status of the sent mails from SAP.
+
+
+DATA: lv_email TYPE   ad_smtpadr.
+
+DATA: lv_bin_file   TYPE xstring,
+      lt_binary_tab TYPE solix_tab. "Table Type to store Binary Data
+
+DATA: lo_bcs           TYPE REF TO cl_bcs,
+      lo_sapuser       TYPE REF TO cl_sapuser_bcs,
+      lo_external_user TYPE REF TO cl_cam_address_bcs,
+      lo_document      TYPE REF TO cl_document_bcs.
+
+DATA: lt_text               TYPE soli_tab,
+      ls_text               TYPE soli,
+      lv_attachment_subject TYPE so_obj_des,
+      lv_result             TYPE os_boolean.
+
+
+*1) Convert the BIN_FILE from XSTRING Format to Binary Format
+
+CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'    "Converting BIN_FILE from XSTRING Format to Binary Format
+  EXPORTING
+    buffer     = lv_bin_file        "Pass the BIN_FILE of the File(PDF/EXCEL)
+*   APPEND_TO_TABLE       = ' '
+* IMPORTING
+*   OUTPUT_LENGTH         =
+  TABLES
+    binary_tab = lt_binary_tab.          " Getting Binary Format of BIN_FILE
+
+*2)	Create the Send Request
+
+TRY.
+    CALL METHOD cl_bcs=>create_persistent  "Creating the Send Request.
+      RECEIVING
+        result = lo_bcs.     "Returing the Object which is of CL_BCS
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*3) Create the SAP User Recipient
+
+TRY.
+    CALL METHOD cl_sapuser_bcs=>create  "Creating SAP User Recipient
+      EXPORTING
+        i_user = 'M01854'
+      RECEIVING
+        result = lo_sapuser.   "Returing Recipient as an Object which is of CL_SAPUSER_BCS
+  CATCH cx_address_bcs .
+ENDTRY.
+
+*5)	Add the Recipient
+
+TRY.
+    CALL METHOD lo_bcs->add_recipient  "Adding Recipient
+      EXPORTING
+        i_recipient = lo_sapuser
+*       i_express   =
+*       i_copy      =
+*       i_blind_copy =
+*       i_no_forward =
+      .
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*4) Create the External Recipient
+
+TRY.
+    CALL METHOD cl_cam_address_bcs=>create_internet_address  "Creating External Recipient
+      EXPORTING
+        i_address_string = lv_email      "Provide Ineternet Email Address
+*       i_address_name   =
+*       i_incl_sapuser   =
+      RECEIVING
+        result           = lo_external_user.   "Returing Recipient as an Object which is of cl_cam_address_bcs
+  CATCH cx_address_bcs .
+ENDTRY.
+
+*5)	Add the Recipient
+
+TRY.
+    CALL METHOD lo_bcs->add_recipient  "Adding Recipient
+      EXPORTING
+        i_recipient = lo_external_user
+*       i_express   =
+*       i_copy      =
+*       i_blind_copy =
+*       i_no_forward =
+      .
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*6) Create the Document
+ls_text-line = 'Hello'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+
+APPEND space TO lt_text.
+
+ls_text-line = 'Please Find Attached Document'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+
+APPEND space TO lt_text.
+
+ls_text-line = 'Br, Meraj.'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+TRY.
+    CALL METHOD cl_document_bcs=>create_document  "Creating the Document
+      EXPORTING
+        i_type    = 'RAW'           "We have to provide Document Class
+        i_subject = 'Testing Email Functionality in ABAP'
+*       i_length  =
+*       i_language     = SPACE
+*       i_importance   =
+*       i_sensitivity  =
+        i_text    = lt_text      "Mail Body Content
+*       i_hex     =
+*       i_header  =
+*       i_sender  =
+*       iv_vsi_profile =
+      RECEIVING
+        result    = lo_document.    "Returing an Object of cl_document_bcs
+  CATCH cx_document_bcs .
+ENDTRY.
+
+*7) Add the Attachment
+lv_attachment_subject = 'Smartform_PDF'.
+TRY.
+    CALL METHOD lo_document->add_attachment       "Adding the Attachment
+      EXPORTING
+        i_attachment_type    = 'PDF'
+        i_attachment_subject = lv_attachment_subject
+        i_att_content_hex    = lt_binary_tab.     "Passing the Binary Format of BIN_FILE
+  CATCH cx_document_bcs .
+ENDTRY.
+
+*8) Sets the Document to be sent.
+TRY.
+    CALL METHOD lo_bcs->set_document    "Linking the CL_DOCUMENT_BCS to CL_BCS
+      EXPORTING
+        i_document = lo_document.    "Passing the Object of cl_document_bcs
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*9) Activate Immediate Sending
+TRY.
+    CALL METHOD lo_bcs->set_send_immediately
+      EXPORTING
+        i_send_immediately = 'X'.
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*10) Send
+TRY.
+    CALL METHOD lo_bcs->send
+*  EXPORTING
+*    i_with_error_screen = SPACE
+      RECEIVING
+        result = lv_result.
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+*11) Commit Work --> It is only required if we are sending the mail to external recipient.
+IF lv_result IS NOT INITIAL.
+  COMMIT WORK.
+ENDIF.
