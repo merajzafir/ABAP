@@ -1,0 +1,247 @@
+*&---------------------------------------------------------------------*
+*& Driver Program For Smartform with Email Functionality
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT z31_sf_drp2.
+
+DATA : lt_spfli  TYPE zit_spfli,
+       lv_fmname TYPE rs38l_fnam.
+
+DATA: ls_ctrl_parameters TYPE ssfctrlop,
+      ls_output_option   TYPE ssfcompop,
+      ls_job_output_info TYPE ssfcrescl.
+
+DATA: lt_lines_pdf TYPE TABLE OF tline,
+      lv_bin_file  TYPE xstring.
+
+DATA: lt_binary_tab TYPE solix_tab. "Table Type to store Binary Data
+
+DATA: lo_bcs           TYPE REF TO cl_bcs,
+      lo_sapuser       TYPE REF TO cl_sapuser_bcs,
+      lo_external_user TYPE REF TO cl_cam_address_bcs,
+      lo_document      TYPE REF TO cl_document_bcs.
+
+DATA: lt_text               TYPE soli_tab,
+      ls_text               TYPE soli,
+      lv_attachment_subject TYPE so_obj_des,
+      lv_result             TYPE os_boolean.
+
+PARAMETERS : email TYPE   ad_smtpadr.
+
+SELECT carrid connid countryfr cityfrom airpfrom
+  FROM spfli
+  INTO TABLE lt_spfli.
+
+CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+  EXPORTING
+    formname           = 'Z31_SF_PROJ1'
+*   VARIANT            = ' '
+*   DIRECT_CALL        = ' '
+  IMPORTING
+    fm_name            = lv_fmname
+  EXCEPTIONS
+    no_form            = 1
+    no_function_module = 2
+    OTHERS             = 3.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+ls_ctrl_parameters-preview = 'X'.
+ls_ctrl_parameters-no_dialog = 'X'.
+ls_ctrl_parameters-getotf = 'X'.
+
+ls_output_option-tddest = 'PREVIEW'.
+
+CALL FUNCTION '/1BCDWB/SF00000067'
+  EXPORTING
+*   ARCHIVE_INDEX      =
+*   ARCHIVE_INDEX_TAB  =
+*   ARCHIVE_PARAMETERS =
+    control_parameters = ls_ctrl_parameters
+*   MAIL_APPL_OBJ      =
+*   MAIL_RECIPIENT     =
+*   MAIL_SENDER        =
+    output_options     = ls_output_option
+    user_settings      = ' '
+    lv_url             = 'www.google.com'
+  IMPORTING
+*   DOCUMENT_OUTPUT_INFO       =
+    job_output_info    = ls_job_output_info
+*   JOB_OUTPUT_OPTIONS =
+* EXCEPTIONS
+*   FORMATTING_ERROR   = 1
+*   INTERNAL_ERROR     = 2
+*   SEND_ERROR         = 3
+*   USER_CANCELED      = 4
+*   OTHERS             = 5
+  .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+CALL FUNCTION 'CONVERT_OTF'
+  EXPORTING
+    format   = 'PDF'
+*   MAX_LINEWIDTH               = 132
+*   ARCHIVE_INDEX               = ' '
+*   COPYNUMBER                  = 0
+*   ASCII_BIDI_VIS2LOG          = ' '
+*   PDF_DELETE_OTFTAB           = ' '
+*   PDF_USERNAME                = ' '
+*   PDF_PREVIEW                 = ' '
+*   USE_CASCADING               = ' '
+*   MODIFIED_PARAM_TABLE        =
+  IMPORTING
+*   BIN_FILESIZE                =
+    bin_file = lv_bin_file " Getting the file in Binary Format
+  TABLES
+    otf      = ls_job_output_info-otfdata "Passing OTF of the Smartform
+    lines    = lt_lines_pdf "Getting PDF as lines in the Inteernal Table
+* EXCEPTIONS
+*   ERR_MAX_LINEWIDTH           = 1
+*   ERR_FORMAT                  = 2
+*   ERR_CONV_NOT_POSSIBLE       = 3
+*   ERR_BAD_OTF                 = 4
+*   OTHERS   = 5
+  .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+****************************************************EMAIL FUNCTIONALITY"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+  EXPORTING
+    buffer     = lv_bin_file
+*   APPEND_TO_TABLE       = ' '
+* IMPORTING
+*   OUTPUT_LENGTH         =
+  TABLES
+    binary_tab = lt_binary_tab.
+
+
+TRY.
+    CALL METHOD cl_bcs=>create_persistent  "Creating the Send Request.
+      RECEIVING
+        result = lo_bcs.     "Returing the Object which is of CL_BCS
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD cl_sapuser_bcs=>create  "Creating SAP User Recipient
+      EXPORTING
+        i_user = 'M01854'
+      RECEIVING
+        result = lo_sapuser.   "Returing Recipient as an Object which is of CL_SAPUSER_BCS
+  CATCH cx_address_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD lo_bcs->add_recipient  "Adding Recipient
+      EXPORTING
+        i_recipient = lo_sapuser
+*       i_express   =
+*       i_copy      =
+*       i_blind_copy =
+*       i_no_forward =
+      .
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD cl_cam_address_bcs=>create_internet_address  "Creating External Recipient
+      EXPORTING
+        i_address_string = email
+*       i_address_name   =
+*       i_incl_sapuser   =
+      RECEIVING
+        result           = lo_external_user.   "Returing Recipient as an Object which is of cl_cam_address_bcs
+  CATCH cx_address_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD lo_bcs->add_recipient  "Adding Recipient
+      EXPORTING
+        i_recipient = lo_external_user
+*       i_express   =
+*       i_copy      =
+*       i_blind_copy =
+*       i_no_forward =
+      .
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+ls_text-line = 'Hello'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+
+APPEND space TO lt_text.
+
+ls_text-line = 'Please Find Attached Document'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+
+APPEND space TO lt_text.
+
+ls_text-line = 'Br, Meraj.'.
+APPEND ls_text TO lt_text.
+CLEAR ls_text.
+
+TRY.
+    CALL METHOD cl_document_bcs=>create_document  "Creating the Document
+      EXPORTING
+        i_type    = 'RAW'           "We have to provide Document Class
+        i_subject = 'Testing Email Functionality in ABAP'
+*       i_length  =
+*       i_language     = SPACE
+*       i_importance   =
+*       i_sensitivity  =
+        i_text    = lt_text      "Mail Body Content
+*       i_hex     =
+*       i_header  =
+*       i_sender  =
+*       iv_vsi_profile =
+      RECEIVING
+        result    = lo_document.    "Returing an Object of cl_document_bcs
+  CATCH cx_document_bcs .
+ENDTRY.
+
+lv_attachment_subject = 'Smartform_PDF'.
+
+TRY.
+    CALL METHOD lo_document->add_attachment       "Adding the Attachment
+      EXPORTING
+        i_attachment_type    = 'PDF'
+        i_attachment_subject = lv_attachment_subject
+        i_att_content_hex    = lt_binary_tab.     "Passing the Binary Format of the file
+  CATCH cx_document_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD lo_bcs->set_document    "Linking the CL_DOCUMENT_BCS to CL_BCS
+      EXPORTING
+        i_document = lo_document.    "Passing the Object of cl_document_bcs
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD lo_bcs->set_send_immediately
+      EXPORTING
+        i_send_immediately = 'X'.
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+TRY.
+    CALL METHOD lo_bcs->send
+*  EXPORTING
+*    i_with_error_screen = SPACE
+      RECEIVING
+        result = lv_result.
+  CATCH cx_send_req_bcs .
+ENDTRY.
+
+IF lv_result IS NOT INITIAL.
+  COMMIT WORK.
+ENDIF.
