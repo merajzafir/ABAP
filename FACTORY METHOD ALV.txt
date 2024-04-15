@@ -1,0 +1,634 @@
+Sample Code: Display ALV in Fullscreen using Factory Method
+REPORT z31_fact_alv1.
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv TYPE REF TO cl_salv_table.
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+TRY.
+    CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+      IMPORTING
+        r_salv_table = lo_alv   "Returns Object of Class CL_SALV_TABLE
+      CHANGING
+        t_table      = lt_final.  "Passing the Internal Table which holds the data to be displayed
+  CATCH cx_salv_msg .
+ENDTRY.
+
+CALL METHOD lo_alv->display.	"Display Output Table
+
+
+
+
+
+
+
+
+
+Sample Code: Display ALV in Custom Container using Factory Method
+REPORT z31_fact_alv2.
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv  TYPE REF TO cl_salv_table,
+      lo_cont TYPE REF TO cl_gui_custom_container.
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+CREATE OBJECT lo_cont EXPORTING container_name = 'CONT'.
+
+TRY.
+    CALL METHOD cl_salv_table=>factory
+      EXPORTING
+*       list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+        r_container    = lo_cont    "Passing Object Of the Container
+        container_name = 'CONT'
+      IMPORTING
+        r_salv_table   = lo_alv   "Returns Object of Class CL_SALV_TABLE
+      CHANGING
+        t_table        = lt_final.  "Passing the Internal Table which holds the data to be displayed
+  CATCH cx_salv_msg .
+ENDTRY.
+
+CALL METHOD lo_alv->display.
+
+Call SCREEN '0100'.
+
+
+
+
+
+
+
+
+
+Sample Code: Enable the Default/Full Functions in the Application Tool bar of Full Screen Display of ALV Table Output
+REPORT z31_fact_alv1.
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv TYPE REF TO cl_salv_table.
+
+DATA: lo_functions TYPE REF TO cl_salv_functions_list.
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+TRY.
+    CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+      IMPORTING
+        r_salv_table = lo_alv   "Returns Object of Class CL_SALV_TABLE
+      CHANGING
+        t_table      = lt_final.  "Passing the Internal Table which holds the data to be displayed
+  CATCH cx_salv_msg .
+ENDTRY.
+
+CALL METHOD lo_alv->get_functions
+  RECEIVING
+    value = lo_functions.   "Returns Object Of Functions Class which contains methods to enable Standard Function Buttons of ALV
+
+*CALL METHOD lo_functions->set_default  "Activate Some of Buttons of Application Toolbar of ALV
+*  EXPORTING
+*    value = if_salv_c_bool_sap=>true.
+
+CALL METHOD lo_functions->set_all   "Activate All Generic ALV Functions of Application Toolbar of ALV
+  EXPORTING
+    value = if_salv_c_bool_sap=>true.
+
+CALL METHOD lo_alv->display.
+
+
+
+
+
+
+
+
+
+
+
+Sample Code: Change the Column Positions/ Column Label in the ALV Table Output
+REPORT z31_fact_alv1.
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv TYPE REF TO cl_salv_table.
+
+DATA: lo_columns TYPE REF TO cl_salv_columns_table.
+DATA: lo_columnnn TYPE REF TO cl_salv_column.
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+
+SELECT carrid connid fldate currency
+FROM sflight
+INTO TABLE lt_sfli
+WHERE carrid IN s_carrid.
+
+IF lt_sfli IS NOT INITIAL.
+  SELECT carrid countryfr cityfrom
+  FROM spfli
+  INTO TABLE lt_spf
+  FOR ALL ENTRIES IN lt_sfli
+  WHERE carrid = lt_sfli-carrid.
+ENDIF.
+
+
+LOOP AT lt_sfli INTO ls_sfli.
+  LOOP AT lt_spf INTO ls_spf WHERE carrid = ls_sfli-carrid.
+    ls_final-carrid = ls_sfli-carrid.
+    ls_final-connid = ls_sfli-connid.
+    ls_final-fldate = ls_sfli-fldate.
+    ls_final-currency = ls_sfli-currency.
+    ls_final-countryfr = ls_spf-countryfr.
+    ls_final-cityfrom = ls_spf-cityfrom.
+    APPEND ls_final TO lt_final.
+    CLEAR ls_final.
+  ENDLOOP.
+ENDLOOP.
+
+TRY.
+    CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+      IMPORTING
+        r_salv_table = lo_alv   "Returns Object of Class CL_SALV_TABLE
+      CHANGING
+        t_table      = lt_final.  "Passing the Internal Table which holds the data to be displayed
+  CATCH cx_salv_msg .
+ENDTRY.
+
+
+CALL METHOD lo_alv->get_columns
+  RECEIVING
+    value = lo_columns.   "Returns Object of Columns class
+
+CALL METHOD lo_columns->set_column_position   "Change the Column Positions
+  EXPORTING
+    columnname = 'CARRID'
+    position   = 2.
+
+CALL METHOD lo_columns->set_column_position
+  EXPORTING
+    columnname = 'CONNID'
+    position   = 1.
+
+
+TRY.
+    CALL METHOD lo_columns->get_column
+      EXPORTING
+        columnname = 'CARRID'
+      RECEIVING
+        value      = lo_columnnn.  "Returns Object of Provided Single Column for further manipulation
+  CATCH cx_salv_not_found .
+ENDTRY.
+
+CALL METHOD lo_columnnn->set_long_text   "Set the Long Field Label of the Column
+  EXPORTING
+    value = 'Airline Code'.
+
+
+CALL METHOD lo_alv->display.
+
+
+
+
+
+
+
+
+
+
+
+
+Sample Code: Double Click
+REPORT z31_fact_alv1.
+
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv TYPE REF TO cl_salv_table.
+DATA: lo_alv2 TYPE REF TO cl_salv_table.
+DATA: lo_functions TYPE REF TO cl_salv_functions_list.
+DATA: lo_events TYPE REF TO cl_salv_events_table.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+    METHODS handler FOR EVENT double_click OF cl_salv_events_table IMPORTING row .   "Double-Click Handler
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD handler.
+    CLEAR ls_sfli.
+    READ TABLE lt_sfli INTO ls_sfli INDEX row.
+    IF sy-subrc EQ 0.
+      SELECT carrid countryfr cityfrom
+        FROM spfli
+        INTO TABLE lt_spf
+        WHERE carrid EQ ls_sfli-carrid.
+
+      TRY.
+          CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+            IMPORTING
+              r_salv_table = lo_alv2   "ALV for Second Display
+            CHANGING
+              t_table      = lt_spf.  "Passing the Internal Table which holds the data to be displayed
+        CATCH cx_salv_msg .
+      ENDTRY.
+
+      CALL METHOD lo_alv2->display.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+START-OF-SELECTION.
+  SELECT carrid connid fldate currency
+  FROM sflight
+  INTO TABLE lt_sfli
+  WHERE carrid IN s_carrid.
+
+
+  TRY.
+      CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+        IMPORTING
+          r_salv_table = lo_alv   "Returns Object of Class CL_SALV_TABLE
+        CHANGING
+          t_table      = lt_sfli.  "Passing the Internal Table which holds the data to be displayed
+    CATCH cx_salv_msg .
+  ENDTRY.
+
+
+  CALL METHOD lo_alv->get_functions
+    RECEIVING
+      value = lo_functions.   "Returns Object Of Functions Class which contains methods to enable Standard Function Buttons of ALV
+
+  CALL METHOD lo_functions->set_all   "Activate All Generic ALV Functions of Application Toolbar of ALV
+    EXPORTING
+      value = if_salv_c_bool_sap=>true.
+
+
+  CALL METHOD lo_alv->get_event   "Contains ALV: Events of CL_SALV_TABLE
+    RECEIVING
+      value = lo_events.    "Returns object of Class which contains the event.
+
+  DATA lo_obj TYPE REF TO class1.
+  CREATE OBJECT lo_obj.
+
+  SET HANDLER lo_obj->handler FOR lo_events.  "Registering the double-click
+
+  CALL METHOD lo_alv->display.
+
+
+
+
+
+
+
+
+
+
+Sample Code: PF Status and User Command
+REPORT z31_fact_alv1.
+
+TABLES: spfli.
+
+TYPES : BEGIN OF str_sfli,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          currency TYPE s_currcode,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+DATA : lt_final TYPE TABLE OF zstr_sfli_spf,
+       ls_final TYPE zstr_sfli_spf.
+
+DATA: lo_alv TYPE REF TO cl_salv_table.
+DATA: lo_alv2 TYPE REF TO cl_salv_table.
+DATA: lo_events TYPE REF TO cl_salv_events_table.
+DATA: lo_grid TYPE REF TO cl_gui_alv_grid.
+
+DATA: lt_rows TYPE lvc_t_row,
+      ls_rows TYPE lvc_s_row.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+    METHODS handler FOR EVENT added_function OF cl_salv_events_table
+      IMPORTING e_salv_function.              "User-Command Handler
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD handler.
+
+    CALL FUNCTION 'GET_GLOBALS_FROM_SLVC_FULLSCR'
+      IMPORTING
+        e_grid = lo_grid.   "Returns the Object of the ALV Grid Class
+
+    CALL METHOD lo_grid->get_selected_rows
+      IMPORTING
+        et_index_rows = lt_rows.
+
+    READ TABLE lt_rows INTO ls_rows INDEX 1.
+    IF sy-subrc EQ 0.
+      CLEAR ls_sfli.
+      READ TABLE lt_sfli INTO ls_sfli INDEX ls_rows-index.
+      IF sy-subrc EQ 0.
+        SELECT carrid countryfr cityfrom
+        FROM spfli
+        INTO TABLE lt_spf
+        WHERE carrid EQ ls_sfli-carrid.
+      ENDIF.
+    ENDIF.
+
+    TRY.
+        CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+          IMPORTING
+            r_salv_table = lo_alv2   "ALV for Second Display
+          CHANGING
+            t_table      = lt_spf.  "Passing the Internal Table which holds the data to be displayed
+      CATCH cx_salv_msg .
+    ENDTRY.
+
+    CALL METHOD lo_alv2->display.
+
+
+  ENDMETHOD.
+ENDCLASS.
+
+
+SELECT-OPTIONS : s_carrid FOR spfli-carrid.
+
+START-OF-SELECTION.
+
+  SET PF-STATUS 'PF_TEST'.
+
+  SELECT carrid connid fldate currency
+  FROM sflight
+  INTO TABLE lt_sfli
+  WHERE carrid IN s_carrid.
+
+
+  TRY.
+      CALL METHOD cl_salv_table=>factory
+*  EXPORTING
+*    list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*    r_container    =
+*    container_name =
+        IMPORTING
+          r_salv_table = lo_alv   "Returns Object of Class CL_SALV_TABLE
+        CHANGING
+          t_table      = lt_sfli.  "Passing the Internal Table which holds the data to be displayed
+    CATCH cx_salv_msg .
+  ENDTRY.
+
+*TRY.
+  CALL METHOD lo_alv->set_screen_status   "This method will assign the custom GUI Status
+    EXPORTING
+      report   = sy-repid
+      pfstatus = 'PF_TEST'    "Passed the name of custom PF-Status
+*     set_functions = C_FUNCTIONS_NONE
+    .
+*ENDTRY.
+
+  CALL METHOD lo_alv->get_event   "Contains ALV: Events of CL_SALV_TABLE
+    RECEIVING
+      value = lo_events.    "Returns object of Class which contains the event.
+
+  DATA lv_obj TYPE REF TO class1.
+  CREATE OBJECT lv_obj.
+
+  SET HANDLER lv_obj->handler FOR lo_events.   "Registering the User-Command
+
+
+  CALL METHOD lo_alv->display. "Display the ALV
+
+
+
+
+
+
+
