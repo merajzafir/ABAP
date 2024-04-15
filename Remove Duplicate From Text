@@ -1,0 +1,17 @@
+*Remove Duplicate From Text
+
+DATA: input_text TYPE string VALUE 'This is is a test test text text example example.',
+      words_table TYPE TABLE OF string,
+      output_text TYPE string,
+      word TYPE string.
+
+SPLIT input_text AT SPACE INTO TABLE words_table.
+
+LOOP AT words_table INTO word.
+  IF NOT word IS INITIAL AND NOT word IN output_text.
+    CONCATENATE output_text word INTO output_text SEPARATED BY ' '.
+  ENDIF.
+ENDLOOP.
+
+WRITE: / 'Input Text:', input_text,
+       / 'Output Text:', output_text.
