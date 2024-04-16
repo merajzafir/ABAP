@@ -1,0 +1,216 @@
+*&---------------------------------------------------------------------*
+*& Report Z31_OOALV
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT Z31_OOALV.
+
+TYPES : BEGIN OF T_MARA,
+          MATNR   TYPE MATNR,
+          ERSDA   TYPE ERSDA,
+          ERNAM   TYPE ERNAM,
+          MTART   TYPE MTART,
+          CELLTAB TYPE LVC_T_STYL, " field used for editing the perticular cell
+        END OF T_MARA,
+        T_TY_MARA TYPE STANDARD TABLE OF T_MARA.
+
+DATA: LT_MARA TYPE TABLE OF T_MARA,
+      LS_MARA TYPE T_MARA.
+
+DATA: CONTAINER   TYPE REF TO CL_GUI_CUSTOM_CONTAINER,
+      GRID1       TYPE REF TO CL_GUI_ALV_GRID,
+      G_CONTAINER TYPE SCRFNAME VALUE 'CCONTAINER'.
+
+DATA : IT_FIELDCAT TYPE LVC_T_FCAT,
+       TY_FIELDCAT TYPE LVC_S_FCAT,
+       TY_LAY1     TYPE LVC_S_LAYO.
+
+
+START-OF-SELECTION.
+  SELECT MATNR
+         ERSDA
+         ERNAM
+         MTART
+    FROM Z31_MARA
+    INTO CORRESPONDING FIELDS OF TABLE LT_MARA.
+
+  CALL SCREEN '0100'.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE STATUS_0100 OUTPUT.
+  SET PF-STATUS 'TEST'.
+*  SET TITLEBAR 'xxx'.
+
+  IF CONTAINER IS INITIAL.
+
+    CREATE OBJECT CONTAINER EXPORTING CONTAINER_NAME = G_CONTAINER. "g_container --> Name of the Screen CustCtrl Name to Link Container
+    CREATE OBJECT GRID1 EXPORTING I_PARENT = CONTAINER . "Pass the object of Parent Container
+
+*******************************************fieldcatalog creation creation
+    TY_FIELDCAT-ROW_POS = 1.
+    TY_FIELDCAT-COL_POS = 1.
+    TY_FIELDCAT-FIELDNAME = 'MATNR'.
+    TY_FIELDCAT-COLTEXT = 'MATNR'.
+    TY_FIELDCAT-OUTPUTLEN = 20.
+    APPEND TY_FIELDCAT TO IT_FIELDCAT.
+    CLEAR TY_FIELDCAT.
+
+    TY_FIELDCAT-ROW_POS = 1.
+    TY_FIELDCAT-COL_POS = 2.
+    TY_FIELDCAT-FIELDNAME = 'ERSDA'.
+    TY_FIELDCAT-COLTEXT = 'ERSDA'.
+    TY_FIELDCAT-OUTPUTLEN = 10.
+    APPEND TY_FIELDCAT TO IT_FIELDCAT.
+    CLEAR TY_FIELDCAT.
+
+    TY_FIELDCAT-ROW_POS = 1.
+    TY_FIELDCAT-COL_POS = 3.
+    TY_FIELDCAT-FIELDNAME = 'ERNAM'.
+    TY_FIELDCAT-COLTEXT = 'ERNAM'.
+    TY_FIELDCAT-OUTPUTLEN = 20.            " Used to modify the output field length
+    APPEND TY_FIELDCAT TO IT_FIELDCAT.
+    CLEAR TY_FIELDCAT.
+
+    TY_FIELDCAT-ROW_POS = 1.
+    TY_FIELDCAT-COL_POS = 4.
+    TY_FIELDCAT-FIELDNAME = 'MTART'.
+    TY_FIELDCAT-COLTEXT = 'MTART'.
+    TY_FIELDCAT-OUTPUTLEN = 10.
+    APPEND TY_FIELDCAT TO IT_FIELDCAT.
+    CLEAR TY_FIELDCAT.
+
+***********************************layout of fieldcat
+*    ty_lay1-no_toolbar = 'X'.
+    TY_LAY1-GRID_TITLE = 'MARA Table Data'.
+    TY_LAY1-SEL_MODE = 'A'.
+
+    TY_LAY1-STYLEFNAME = 'CELLTAB'.
+
+    CALL METHOD GRID1->SET_TABLE_FOR_FIRST_DISPLAY
+      EXPORTING
+        IS_LAYOUT                     = TY_LAY1
+      CHANGING
+        IT_OUTTAB                     = LT_MARA[]
+        IT_FIELDCATALOG               = IT_FIELDCAT
+      EXCEPTIONS
+        INVALID_PARAMETER_COMBINATION = 1
+        PROGRAM_ERROR                 = 2
+        TOO_MANY_LINES                = 3
+        OTHERS                        = 4.
+    IF SY-SUBRC <> 0.
+*     Implement suitable error handling here
+    ENDIF.
+
+  ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0100 INPUT.
+  CASE SY-UCOMM.
+    WHEN 'EDIT'.
+      PERFORM CHANGE_MODE.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+    WHEN 'CANCEL'.
+      LEAVE PROGRAM.
+    WHEN 'EXIT'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  CHANGE_MODE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM CHANGE_MODE .
+
+  DATA : LT_ROW_NO   TYPE LVC_T_ROID,
+         LS_ROW_NO   TYPE LVC_S_ROID,
+         LS_STYLEROW TYPE LVC_S_STYL,
+         LT_STYLEROW TYPE TABLE OF LVC_S_STYL..
+
+  CALL METHOD GRID1->GET_SELECTED_ROWS
+    IMPORTING
+*     ET_INDEX_ROWS =
+      ET_ROW_NO = LT_ROW_NO.
+
+  IF LT_ROW_NO IS NOT INITIAL.
+    LOOP AT LT_MARA INTO LS_MARA.
+
+      READ TABLE LT_ROW_NO INTO LS_ROW_NO WITH KEY ROW_ID = SY-TABIX.
+      IF SY-SUBRC = 0.
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_DISABLED.
+        LS_STYLEROW-FIELDNAME = 'MATNR'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_ENABLED.
+        LS_STYLEROW-FIELDNAME = 'ERSDA'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_ENABLED.
+        LS_STYLEROW-FIELDNAME = 'ERNAM'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_ENABLED.
+        LS_STYLEROW-FIELDNAME = 'MTART'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        CLEAR: LS_MARA-CELLTAB.
+        INSERT LINES OF LT_STYLEROW INTO TABLE LS_MARA-CELLTAB.
+        MODIFY LT_MARA FROM LS_MARA TRANSPORTING CELLTAB.
+        CLEAR: LT_STYLEROW.
+
+      ELSE.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_DISABLED.
+        LS_STYLEROW-FIELDNAME = 'MATNR'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_DISABLED.
+        LS_STYLEROW-FIELDNAME = 'ERSDA'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_DISABLED.
+        LS_STYLEROW-FIELDNAME = 'ERNAM'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        LS_STYLEROW-STYLE = CL_GUI_ALV_GRID=>MC_STYLE_DISABLED.
+        LS_STYLEROW-FIELDNAME = 'MTART'.
+        INSERT LS_STYLEROW INTO TABLE LT_STYLEROW.
+
+        CLEAR: LS_MARA-CELLTAB.
+        INSERT LINES OF LT_STYLEROW INTO TABLE LS_MARA-CELLTAB.
+        MODIFY LT_MARA FROM LS_MARA TRANSPORTING CELLTAB.
+        CLEAR: LT_STYLEROW.
+      ENDIF.
+    ENDLOOP.
+  ENDIF.
+
+  GRID1->CHECK_CHANGED_DATA( ).   " used to reflect the change value in alv display
+
+  CLEAR LT_ROW_NO.
+  CLEAR LS_ROW_NO.
+
+  IF GRID1->IS_READY_FOR_INPUT( ) EQ 0.
+    CALL METHOD GRID1->SET_READY_FOR_INPUT
+      EXPORTING
+        I_READY_FOR_INPUT = 1.
+
+  ELSE.
+    CALL METHOD GRID1->SET_READY_FOR_INPUT
+      EXPORTING
+        I_READY_FOR_INPUT = 0.
+  ENDIF.
+  GRID1->REFRESH_TABLE_DISPLAY( ).
+
+ENDFORM.
