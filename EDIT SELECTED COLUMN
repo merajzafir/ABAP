@@ -1,0 +1,282 @@
+*&---------------------------------------------------------------------*
+*& Report Z31_OOALV
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT Z31_OOALV.
+
+TYPES : BEGIN OF STR_SFLI,
+          ICON     TYPE CHAR4,
+          CARRID   TYPE S_CARR_ID,
+          CONNID   TYPE S_CONN_ID,
+          FLDATE   TYPE S_DATE,
+          PRICE    TYPE S_PRICE,
+          CURRENCY TYPE S_CURRCODE,
+          SEATSMAX TYPE S_SEATSMAX,
+          SEATSOCC TYPE S_SEATSOCC,
+        END OF STR_SFLI.
+
+DATA : LT_SFLI TYPE TABLE OF STR_SFLI,
+       LS_SFLI TYPE STR_SFLI.
+
+DATA: CONTAINER TYPE REF TO CL_GUI_CUSTOM_CONTAINER,
+      GRID1     TYPE REF TO CL_GUI_ALV_GRID.
+
+DATA : LT_FIELDCAT TYPE LVC_T_FCAT,
+       LS_FIELDCAT TYPE LVC_S_FCAT,
+       LS_LAYOUT   TYPE LVC_S_LAYO.
+
+CLASS HANDLE_EVENT DEFINITION.
+  PUBLIC SECTION.
+    METHODS HANDLE_TOOLBAR FOR EVENT TOOLBAR OF CL_GUI_ALV_GRID IMPORTING E_OBJECT. "TOOLBAR handler method
+    METHODS HANDLE_USER_COMMAND FOR EVENT USER_COMMAND OF CL_GUI_ALV_GRID IMPORTING E_UCOMM.  "User-Commnad handler method
+ENDCLASS.
+
+CLASS HANDLE_EVENT IMPLEMENTATION.
+  METHOD HANDLE_TOOLBAR.
+
+    DATA: LS_BUTTON TYPE STB_BUTTON.
+
+    CLEAR LS_BUTTON.
+    LS_BUTTON-FUNCTION = 'EDIT'.
+    LS_BUTTON-QUICKINFO = 'Edit'.
+    LS_BUTTON-BUTN_TYPE = 0.
+    LS_BUTTON-DISABLED = ' '.
+    LS_BUTTON-TEXT = 'EDIT/DISPLAY'.
+    LS_BUTTON-ICON = '@3I@'. "SE11 --> TYPE-GROUP : ICON
+    APPEND LS_BUTTON TO E_OBJECT->MT_TOOLBAR.
+
+  ENDMETHOD.
+
+  METHOD HANDLE_USER_COMMAND.
+    IF E_UCOMM = 'EDIT'.
+      PERFORM CHANGE_MODE.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+  SELECT CARRID    " Airline Code
+  CONNID    " Flight Connection Number
+  FLDATE    " Flight date
+  PRICE     " Airfare
+  CURRENCY  " Local currency of airline
+  SEATSMAX  " Maximum capacity in economy class
+  SEATSOCC  " Occupied seats in economy class
+  FROM Z31_SFLIGHT   " Flight
+  INTO CORRESPONDING FIELDS OF TABLE LT_SFLI.
+
+END-OF-SELECTION.
+
+  PERFORM POPULATE_RECORDS.
+
+  CALL SCREEN '0100'.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE STATUS_0100 OUTPUT.
+  SET PF-STATUS 'TEST'.
+
+  IF CONTAINER IS INITIAL.
+
+    CREATE OBJECT CONTAINER EXPORTING CONTAINER_NAME = 'CONT'. "CONT --> Name of the Screen CustCtrl Name to Link Container
+    CREATE OBJECT GRID1 EXPORTING I_PARENT = CONTAINER . "Pass the object of Parent Container
+
+*******************************************fieldcatalog creation creation
+    LS_FIELDCAT-COL_POS = 1.
+    LS_FIELDCAT-FIELDNAME = 'ICON'.
+    LS_FIELDCAT-SCRTEXT_L = 'Occupency Status'.
+    LS_FIELDCAT-ICON = 'X'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 2.
+    LS_FIELDCAT-FIELDNAME = 'CARRID'.
+    LS_FIELDCAT-SCRTEXT_L = 'Airline Code'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 3.
+    LS_FIELDCAT-FIELDNAME = 'CONNID'.
+    LS_FIELDCAT-SCRTEXT_L = 'Flight Connection Number'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 4.
+    LS_FIELDCAT-FIELDNAME = 'FLDATE'.
+    LS_FIELDCAT-SCRTEXT_L = 'Flight date'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 5.
+    LS_FIELDCAT-FIELDNAME = 'PRICE'.
+    LS_FIELDCAT-SCRTEXT_L = 'Price'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 6.
+    LS_FIELDCAT-FIELDNAME = 'CURRENCY'.
+    LS_FIELDCAT-SCRTEXT_L = 'Currency Key'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 7.
+    LS_FIELDCAT-FIELDNAME = 'SEATSMAX'.
+    LS_FIELDCAT-SCRTEXT_L = 'Maximum capacity in economy class'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+    LS_FIELDCAT-COL_POS = 8.
+    LS_FIELDCAT-FIELDNAME = 'SEATSOCC'.
+    LS_FIELDCAT-SCRTEXT_L = 'Occupied seats in economy class'.
+    APPEND LS_FIELDCAT TO LT_FIELDCAT.
+    CLEAR LS_FIELDCAT.
+
+***********************************layout of fieldcat
+    LS_LAYOUT-GRID_TITLE = 'Airline Table Data'.
+    LS_LAYOUT-SEL_MODE = 'A'. "Provide Multiple Selection in ALV Display
+    LS_LAYOUT-CWIDTH_OPT = 'X'.
+
+
+    DATA OB1 TYPE REF TO HANDLE_EVENT.
+    CREATE OBJECT OB1.
+
+    SET HANDLER OB1->HANDLE_TOOLBAR FOR GRID1.  "Assigning the Custom Button to the ALV Grid Tool Bar
+
+    SET HANDLER OB1->HANDLE_USER_COMMAND FOR GRID1. "Registering the User-Command
+
+    CALL METHOD GRID1->SET_TABLE_FOR_FIRST_DISPLAY
+      EXPORTING
+        IS_LAYOUT                     = LS_LAYOUT
+      CHANGING
+        IT_OUTTAB                     = LT_SFLI
+        IT_FIELDCATALOG               = LT_FIELDCAT
+      EXCEPTIONS
+        INVALID_PARAMETER_COMBINATION = 1
+        PROGRAM_ERROR                 = 2
+        TOO_MANY_LINES                = 3
+        OTHERS                        = 4.
+    IF SY-SUBRC <> 0.
+*     Implement suitable error handling here
+    ENDIF.
+
+
+  ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0100 INPUT.
+  CASE SY-UCOMM.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+    WHEN 'CANCEL'.
+      LEAVE PROGRAM.
+    WHEN 'EXIT'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  POPULATE_RECORDS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM POPULATE_RECORDS .
+
+  LOOP AT LT_SFLI INTO LS_SFLI.
+    IF LS_SFLI-SEATSOCC LT 200.
+      LS_SFLI-ICON = ICON_GREEN_LIGHT.
+    ELSEIF LS_SFLI-SEATSOCC BETWEEN 200 AND 400.
+      LS_SFLI-ICON = ICON_YELLOW_LIGHT.
+    ELSE.
+      LS_SFLI-ICON = ICON_RED_LIGHT.
+    ENDIF.
+    MODIFY LT_SFLI FROM LS_SFLI TRANSPORTING ICON.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CHANGE_MODE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM CHANGE_MODE .
+  DATA: LT_COLUMNS TYPE LVC_T_COL,
+        LS_COLUMN  TYPE LVC_S_COL.
+
+  CALL METHOD GRID1->GET_SELECTED_COLUMNS
+    IMPORTING
+      ET_INDEX_COLUMNS = LT_COLUMNS.
+
+  IF LT_COLUMNS IS NOT INITIAL.
+    LOOP AT LT_COLUMNS INTO LS_COLUMN.
+      LOOP AT LT_FIELDCAT INTO LS_FIELDCAT WHERE FIELDNAME = LS_COLUMN-FIELDNAME.
+        LS_FIELDCAT-EDIT = ABAP_TRUE.
+        LS_FIELDCAT-EMPHASIZE = 'C700'.
+        MODIFY LT_FIELDCAT FROM LS_FIELDCAT TRANSPORTING EDIT EMPHASIZE.
+*Space - this means you use the standard behaviour of ALV grid
+*‘C’ is a character that notifies ALV grid that you will use specific colours
+*x – contains one of the following colour numbers:
+*0 - background colour
+*1 - blue
+*2 - gray
+*3 - yellow
+*4 - blue/gray
+*5 - green
+*6 - red
+*7 - orange
+*y – is saying if the colours are intensified (‘1’) or not (‘0’)
+*z – is saying if the colours should be inverted (‘1’) or not (‘0’)
+
+      ENDLOOP.
+    ENDLOOP.
+  ELSE.
+    LOOP AT LT_FIELDCAT INTO LS_FIELDCAT.
+      LS_FIELDCAT-EDIT = ABAP_FALSE.
+      LS_FIELDCAT-EMPHASIZE = ' '.
+      MODIFY LT_FIELDCAT FROM LS_FIELDCAT TRANSPORTING EDIT EMPHASIZE.
+    ENDLOOP.
+
+  ENDIF.
+
+  IF GRID1->IS_READY_FOR_INPUT( ) EQ 0.
+    CALL METHOD GRID1->SET_READY_FOR_INPUT
+      EXPORTING
+        I_READY_FOR_INPUT = 1.
+
+  ELSE.
+    CALL METHOD GRID1->SET_READY_FOR_INPUT
+      EXPORTING
+        I_READY_FOR_INPUT = 0.
+  ENDIF.
+
+*  GRID1->REFRESH_TABLE_DISPLAY( ).  "Redisplay Table
+
+  CALL METHOD GRID1->SET_TABLE_FOR_FIRST_DISPLAY
+    EXPORTING
+      IS_LAYOUT                     = LS_LAYOUT
+    CHANGING
+      IT_OUTTAB                     = LT_SFLI
+      IT_FIELDCATALOG               = LT_FIELDCAT
+    EXCEPTIONS
+      INVALID_PARAMETER_COMBINATION = 1
+      PROGRAM_ERROR                 = 2
+      TOO_MANY_LINES                = 3
+      OTHERS                        = 4.
+  IF SY-SUBRC <> 0.
+*     Implement suitable error handling here
+  ENDIF.
+
+
+ENDFORM.
