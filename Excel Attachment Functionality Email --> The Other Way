@@ -1,0 +1,198 @@
+*&---------------------------------------------------------------------*
+*& Report Z31_EXCEL_EMAIL
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT Z31_EXCEL_EMAIL.
+
+
+
+DATA: LT_BINARY_TAB TYPE SOLIX_TAB. "Table Type to store Binary Data
+
+DATA: LO_BCS           TYPE REF TO CL_BCS,
+      LO_SAPUSER       TYPE REF TO CL_SAPUSER_BCS,
+      LO_EXTERNAL_USER TYPE REF TO CL_CAM_ADDRESS_BCS,
+      LO_DOCUMENT      TYPE REF TO CL_DOCUMENT_BCS.
+
+DATA: LT_TEXT               TYPE SOLI_TAB,
+      LS_TEXT               TYPE SOLI,
+      LV_ATTACHMENT_SUBJECT TYPE SO_OBJ_DES,
+      LV_RESULT             TYPE OS_BOOLEAN.
+
+DATA: D_XLS_FNAME    TYPE SO_OBJ_DES,
+      D_XLS_ATTCH    TYPE STRING,
+      D_ROW          TYPE STRING,
+      LV_STR_TO_XSTR TYPE XSTRING.
+
+
+
+START-OF-SELECTION.
+  "Get Data
+  SELECT DISTINCT CARRID, CONNID FROM SFLIGHT INTO TABLE @DATA(LT_DATA).
+
+
+*2)	CREATE THE SEND REQUEST
+
+  TRY.
+      CALL METHOD CL_BCS=>CREATE_PERSISTENT  "Creating the Send Request.
+        RECEIVING
+          RESULT = LO_BCS.     "Returing the Object which is of CL_BCS
+    CATCH CX_SEND_REQ_BCS .
+  ENDTRY.
+
+
+*3) CREATE THE SAP USER RECIPIENT
+  DATA(LV_SAPID) = SY-UNAME.
+  TRY.
+      CALL METHOD CL_SAPUSER_BCS=>CREATE  "Creating SAP User Recipient
+        EXPORTING
+          I_USER = LV_SAPID
+        RECEIVING
+          RESULT = LO_SAPUSER.   "Returing Recipient as an Object which is of CL_SAPUSER_BCS
+    CATCH CX_ADDRESS_BCS .
+  ENDTRY.
+
+*5)	Add the Recipient
+
+  TRY.
+      CALL METHOD LO_BCS->ADD_RECIPIENT  "Adding Recipient
+        EXPORTING
+          I_RECIPIENT = LO_SAPUSER
+*         i_express   =
+*         i_copy      =
+*         i_blind_copy =
+*         i_no_forward =
+        .
+    CATCH CX_SEND_REQ_BCS .
+  ENDTRY.
+
+**4) Create the External Recipient
+*
+*    TRY.
+*        CALL METHOD CL_CAM_ADDRESS_BCS=>CREATE_INTERNET_ADDRESS  "Creating External Recipient
+*          EXPORTING
+*            I_ADDRESS_STRING = 'meraj.zafir@dxc.com'      "Provide Ineternet Email Address
+**           i_address_name   =
+**           i_incl_sapuser   =
+*          RECEIVING
+*            RESULT           = LO_EXTERNAL_USER.   "Returing Recipient as an Object which is of cl_cam_address_bcs
+*      CATCH CX_ADDRESS_BCS .
+*    ENDTRY.
+*
+**5)  Add the Recipient
+*
+*    TRY.
+*        CALL METHOD LO_BCS->ADD_RECIPIENT  "Adding Recipient
+*          EXPORTING
+*            I_RECIPIENT = LO_EXTERNAL_USER
+**           i_express   =
+**           i_copy      =
+**           i_blind_copy =
+**           i_no_forward =
+*          .
+*      CATCH CX_SEND_REQ_BCS .
+*    ENDTRY.
+
+
+*6) CREATE THE DOCUMENT
+  LS_TEXT-LINE = 'Hello'.
+  APPEND LS_TEXT TO LT_TEXT.
+  CLEAR LS_TEXT.
+
+  APPEND SPACE TO LT_TEXT.
+
+  LS_TEXT-LINE = 'Please Find Attached Document'.
+  APPEND LS_TEXT TO LT_TEXT.
+  CLEAR LS_TEXT.
+
+  APPEND SPACE TO LT_TEXT.
+
+  LS_TEXT-LINE = 'Br, Meraj.'.
+  APPEND LS_TEXT TO LT_TEXT.
+  CLEAR LS_TEXT.
+
+  TRY.
+      CALL METHOD CL_DOCUMENT_BCS=>CREATE_DOCUMENT  "Creating the Document
+        EXPORTING
+          I_TYPE    = 'RAW'           "We have to provide Document Class
+          I_SUBJECT = 'Testing Excel Attachment Functionality Email'
+*         i_length  =
+*         i_language     = SPACE
+*         i_importance   =
+*         i_sensitivity  =
+          I_TEXT    = LT_TEXT      "Mail Body Content
+*         i_hex     =
+*         i_header  =
+*         i_sender  =
+*         iv_vsi_profile =
+        RECEIVING
+          RESULT    = LO_DOCUMENT.    "Returing an Object of cl_document_bcs
+    CATCH CX_DOCUMENT_BCS .
+  ENDTRY.
+
+*7) ADD THE ATTACHMENT
+  "excel filename
+  D_XLS_FNAME = 'Airline Master Data.xls'.
+
+  "create attachment
+  CONCATENATE 'Airline Code' 'Flight Connection Number' INTO D_ROW SEPARATED BY CL_ABAP_CHAR_UTILITIES=>HORIZONTAL_TAB.
+  CONCATENATE D_ROW CL_ABAP_CHAR_UTILITIES=>NEWLINE INTO D_XLS_ATTCH.
+
+  LOOP AT LT_DATA INTO DATA(LS_DATA).
+    CONCATENATE LS_DATA-CARRID LS_DATA-CONNID INTO D_ROW SEPARATED BY CL_ABAP_CHAR_UTILITIES=>HORIZONTAL_TAB.
+    CONCATENATE D_XLS_ATTCH D_ROW CL_ABAP_CHAR_UTILITIES=>NEWLINE INTO D_XLS_ATTCH.
+  ENDLOOP.
+
+  CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+    EXPORTING
+      TEXT   = D_XLS_ATTCH
+    IMPORTING
+      BUFFER = LV_STR_TO_XSTR.
+
+  CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+    EXPORTING
+      BUFFER     = LV_STR_TO_XSTR
+    TABLES
+      BINARY_TAB = LT_BINARY_TAB.          " Getting Binary Format of Data  .
+
+
+  LV_ATTACHMENT_SUBJECT = 'EXPORTED EXCEL FILE'.
+  TRY.
+      CALL METHOD LO_DOCUMENT->ADD_ATTACHMENT       "Adding the Attachment
+        EXPORTING
+          I_ATTACHMENT_TYPE    = 'XLS'
+          I_ATTACHMENT_SUBJECT = D_XLS_FNAME
+          I_ATT_CONTENT_HEX    = LT_BINARY_TAB.     "Passing the Binary Format of the Data
+    CATCH CX_DOCUMENT_BCS .
+  ENDTRY.
+
+*8) SETS THE DOCUMENT TO BE SENT.
+  TRY.
+      CALL METHOD LO_BCS->SET_DOCUMENT    "Linking the CL_DOCUMENT_BCS to CL_BCS
+        EXPORTING
+          I_DOCUMENT = LO_DOCUMENT.    "Passing the Object of cl_document_bcs
+    CATCH CX_SEND_REQ_BCS .
+  ENDTRY.
+
+*9) Activate Immediate Sending
+  TRY.
+      CALL METHOD LO_BCS->SET_SEND_IMMEDIATELY
+        EXPORTING
+          I_SEND_IMMEDIATELY = 'X'.
+    CATCH CX_SEND_REQ_BCS .
+  ENDTRY.
+
+*10) Send
+  TRY.
+      CALL METHOD LO_BCS->SEND
+*  EXPORTING
+*    i_with_error_screen = SPACE
+        RECEIVING
+          RESULT = LV_RESULT.
+    CATCH CX_SEND_REQ_BCS .
+  ENDTRY.
+
+*11) Commit Work --> It is only required if we are sending the mail to external recipient.
+  IF LV_RESULT IS NOT INITIAL.
+    COMMIT WORK.
+  ENDIF.
