@@ -69,7 +69,7 @@ START-OF-SELECTION.
   "Get Data
   SELECT * FROM SFLIGHT INTO TABLE @DATA(LT_DATA).
   GET REFERENCE OF LT_DATA INTO DATA(LO_DATA_REF). "Getting The Reference of Data Internal Table
-  DATA(LV_XSTRING) = NEW ZCL_ITAB_TO_EXCEL( )->ITAB_TO_XSTRING( LO_DATA_REF ). "XSTRING of Data Internal Table
+  DATA(LV_XSTRING) = NEW ZCL_ITAB_TO_EXCEL( )->ITAB_TO_XSTRING( LO_DATA_REF ). "Excel XSTRING of Data Internal Table
 
 *1) Convert the XSTRING Format to Binary Format
   CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'    "Converting BIN_FILE from XSTRING Format to Binary Format
