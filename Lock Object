@@ -1,0 +1,50 @@
+*&---------------------------------------------------------------------*
+*& Report ZPRGM_LOCK
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZPRGM_LOCK.
+"Lock Object Name -->   E_TRDIR
+
+DATA LS_DATA TYPE ZSFLIGHT.
+
+START-OF-SELECTION.
+  SET PF-STATUS 'PF1'.
+
+  CALL FUNCTION 'ENQUEUE_E_TRDIR'
+    EXPORTING
+      MODE_TRDIR = 'X'
+      NAME       =  sy-repid
+*     X_NAME     = ' '
+*     _SCOPE     = '2'
+*     _WAIT      = ' '
+*     _COLLECT   = ' '
+* EXCEPTIONS
+*     FOREIGN_LOCK         = 1
+*     SYSTEM_FAILURE       = 2
+*     OTHERS     = 3
+    .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+  IF SY-SUBRC <> 0.
+    MESSAGE 'Other User is Accessing Now' TYPE 'W'.
+  ENDIF.
+
+  WRITE 'Successful'.
+
+AT USER-COMMAND.
+  IF SY-UCOMM = 'UNLOCK'.
+    CALL FUNCTION 'DEQUEUE_E_TRDIR'
+      EXPORTING
+        MODE_TRDIR = 'X'
+        NAME       = SY-REPID
+*       X_NAME     = ' '
+*       _SCOPE     = '3'
+*       _SYNCHRON  = ' '
+*       _COLLECT   = ' '
+      .
+
+  ENDIF.
