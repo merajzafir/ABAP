@@ -144,4 +144,27 @@ start-of-selection.
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+REPORT Z31_SELECTION_SCREEN.
 
+"Custom Button Application Tool Bar on Selection Screen
+"In the GUI status of the selection screen set by the system, the application toolbar contains five inactive pushbuttons,
+" to which the function codes "FC01" to "FC05" are assigned. SELECTION-SCREEN FUNCTION KEY n statement activates the pushbutton of the function code "FC0n",
+" where a value between 1 and 5 must be entered for n.
+TABLES SSCRFIELDS.
+
+PARAMETERS: P_D1 TYPE I DEFAULT 1000.
+
+SELECTION-SCREEN FUNCTION KEY 1. "Used to desgin button on Application Tool Bar
+SELECTION-SCREEN FUNCTION KEY 2.
+
+INITIALIZATION.
+  SSCRFIELDS-FUNCTXT_01 = 'ABAP Editor'.
+  SSCRFIELDS-FUNCTXT_02 = 'Message'.
+
+AT SELECTION-SCREEN.
+  CASE SSCRFIELDS-UCOMM.
+    WHEN 'FC01'.
+      CALL TRANSACTION 'SE38'.
+    WHEN 'FC02'.
+      MESSAGE | User { sy-uname } | TYPE 'I'.
+  ENDCASE.
