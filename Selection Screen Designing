@@ -98,5 +98,50 @@ MESSAGE | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | TYP
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+report z31_selection_screen.
 
+selection-screen begin of block b1 with frame. "Simple Block
+parameters: p_d1 type i default 100 obligatory,
+            p_d2 type i default 20 obligatory.
+selection-screen end of block b1.
+
+SELECTION-SCREEN SKIP 2. "Add Two Line Spaces
+
+selection-screen begin of block b2 with frame title text-004. "Block With Title
+selection-screen begin of line. " Used to align mutiple input fields in single line
+
+selection-screen position 5.
+parameters plus as checkbox default abap_true.
+selection-screen comment 7(8) text-001. "Used to Dislay Text for Input Parameters
+
+selection-screen position 20.
+parameters minus as checkbox.
+selection-screen comment 22(8) text-002. "Used to Dislay Text for Input Parameters
+
+selection-screen position 35.
+parameters multiply as checkbox.
+selection-screen comment 37(8) text-003. "Used to Dislay Text for Input Parameters
+
+selection-screen end of line.
+selection-screen end of block b2.
+
+start-of-selection.
+  if plus = 'X'.
+    data(lv_output1) = p_d1 + p_d2.
+  endif.
+
+  if minus = 'X'.
+    data(lv_output2) = p_d1 - p_d2.
+  endif.
+
+  if multiply = 'X'.
+    data(lv_output3) = p_d1 * p_d2.
+  endif.
+
+  message | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | type 'I'.
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
