@@ -1,0 +1,23 @@
+REPORT Z31_SELECTION_SCREEN.
+
+" Checkbox on Selection Screen
+PARAMETERS: p_d1 TYPE i DEFAULT 100 OBLIGATORY,
+            p_d2 TYPE i DEFAULT 20 OBLIGATORY,
+            Plus AS CHECKBOX,
+            Minus AS CHECKBOX,
+            Multiply AS CHECKBOX DEFAULT abap_true.
+
+
+IF plus = 'X'.
+   data(lv_output1) = p_d1 + p_d2.
+ENDIF.
+
+IF minus = 'X'.
+   data(lv_output2) = p_d1 - p_d2.
+ENDIF.
+
+IF multiply = 'X'.
+   data(lv_output3) = p_d1 * p_d2.
+ENDIF.
+
+MESSAGE | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | TYPE 'I'.
