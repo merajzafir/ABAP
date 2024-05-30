@@ -21,3 +21,82 @@ IF multiply = 'X'.
 ENDIF.
 
 MESSAGE | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | TYPE 'I'.
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+REPORT Z31_SELECTION_SCREEN.
+
+" Radiobuttons on Selection Screen
+PARAMETERS: p_d1 TYPE i DEFAULT 100 OBLIGATORY,
+            p_d2 TYPE i DEFAULT 20 OBLIGATORY,
+            Plus RADIOBUTTON GROUP GP1,
+            Minus RADIOBUTTON GROUP GP1.
+
+data: lv_output TYPE i,
+      lv_text(10) TYPE c.
+
+IF plus = 'X'.
+  lv_output = p_d1 + p_d2.
+  lv_text = 'PLUS'.
+ELSE.
+  lv_output = p_d1 - p_d2.
+  lv_text = 'MINUS'.
+ENDIF.
+
+MESSAGE | { lv_text } { lv_output } | TYPE 'I'.
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+REPORT Z31_SELECTION_SCREEN.
+
+" Multiple Checkbox on Single Line
+PARAMETERS: p_d1 TYPE i DEFAULT 100 OBLIGATORY,
+            p_d2 TYPE i DEFAULT 20 OBLIGATORY.
+
+SELECTION-SCREEN BEGIN OF LINE. " USed to align mutiple input fields in single line
+
+  SELECTION-SCREEN POSITION 5.
+  PARAMETERS Plus AS CHECKBOX DEFAULT abap_true.
+  SELECTION-SCREEN COMMENT 7(8) TEXT-001. "Used to Dislay Text for Input Parameters
+
+  SELECTION-SCREEN POSITION 20.
+  PARAMETERS Minus AS CHECKBOX.
+  SELECTION-SCREEN COMMENT 22(8) TEXT-002. "Used to Dislay Text for Input Parameters
+
+  SELECTION-SCREEN POSITION 35.
+  PARAMETERS Multiply AS CHECKBOX.
+  SELECTION-SCREEN COMMENT 37(8) TEXT-003. "Used to Dislay Text for Input Parameters
+
+SELECTION-SCREEN END OF LINE.
+
+
+START-OF-SELECTION.
+IF plus = 'X'.
+   data(lv_output1) = p_d1 + p_d2.
+ENDIF.
+
+IF minus = 'X'.
+   data(lv_output2) = p_d1 - p_d2.
+ENDIF.
+
+IF multiply = 'X'.
+   data(lv_output3) = p_d1 * p_d2.
+ENDIF.
+
+MESSAGE | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | TYPE 'I'.
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
