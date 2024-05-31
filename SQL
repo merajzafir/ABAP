@@ -1,0 +1,33 @@
+TABLES vbak.
+DATA lv_cityfrom TYPE spfli-cityfrom VALUE 'NEW YORK'.
+
+*"Inner Join
+SELECT c~carrname, p~connid, p~cityfrom, p~cityto
+       FROM scarr AS c
+            INNER JOIN spfli AS p
+                  ON c~carrid = p~carrid
+       INTO TABLE @DATA(result1)
+       WHERE p~cityfrom = @lv_cityfrom.
+cl_demo_output=>display( result1 ).
+
+"Union --> Combine Result of two or more query with no duplicate.
+"Union All --> Combine Result of two or more query with all duplicate.
+SELECT sflight~carrid, sflight~connid, sflight~fldate,
+       spfli~cityfrom, spfli~cityto
+  FROM sflight INNER JOIN spfli
+    ON sflight~carrid = spfli~carrid AND
+       sflight~connid = spfli~connid
+    WHERE spfli~cityfrom = 'FRANKFURT'
+
+UNION ALL
+
+SELECT sflight~carrid, sflight~connid, sflight~fldate,
+       spfli~cityfrom, spfli~cityto
+ FROM sflight  INNER JOIN spfli
+   ON sflight~carrid = spfli~carrid AND
+      sflight~connid = spfli~connid
+ WHERE spfli~cityfrom = 'SAN FRANCISCO'
+
+INTO TABLE @DATA(lt_flights).
+cl_demo_output=>display( lt_flights ).
+
