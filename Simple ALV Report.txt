@@ -1557,3 +1557,324 @@ ENDFORM.
 
 
 
+
+
+
+Sample Code: Edit ALV Report and Update Database
+*&---------------------------------------------------------------------*
+*& Report Z31_ALV_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT z31_alv_report.
+
+PARAMETERS username TYPE sy-uname DEFAULT sy-uname.
+
+DATA : lt_spfli TYPE STANDARD TABLE OF zspfli.
+DATA : lt_spfli_old TYPE STANDARD TABLE OF zspfli.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA ls_layout TYPE slis_layout_alv.
+
+DATA: lt_list_comment TYPE slis_t_listheader,
+      ls_list_comment TYPE  slis_listheader.
+
+DATA lv_mode TYPE boolean. "Flag for Toggle B/w Edit and Display Mode
+
+START-OF-SELECTION.
+  PERFORM data_selection.
+
+  PERFORM build_layout.
+
+  PERFORM build_fieldcatalog.
+
+  PERFORM display_alv.
+
+*&---------------------------------------------------------------------*
+*&      Form  DATA_SELECTION
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM data_selection .
+  SELECT * FROM zspfli INTO TABLE lt_spfli.
+  lt_spfli_old = lt_spfli. "make of copy of the table to do compare after change
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  BUILD_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM build_layout .
+  ls_layout-colwidth_optimize = 'X'. "To Display Full Column Label
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  BUILD_FIELDCATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM build_fieldcatalog .
+  ls_fieldcat-col_pos = '1'.
+  ls_fieldcat-fieldname = 'MANDT'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Client'.
+  ls_fieldcat-key = 'X'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '2'.
+  ls_fieldcat-fieldname = 'CARRID'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Airline Code'.
+  ls_fieldcat-key = 'X'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '3'.
+  ls_fieldcat-fieldname = 'CONNID'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Flight Connection Number'.
+  ls_fieldcat-key = 'X'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '4'.
+  ls_fieldcat-fieldname = 'COUNTRYFR'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Country Key'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '5'.
+  ls_fieldcat-fieldname = 'CITYFROM'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Departure city'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '6'.
+  ls_fieldcat-fieldname = 'AIRPFROM'.
+  ls_fieldcat-tabname = 'lt_spfli'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Departure airport'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_alv .
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK        = ' '
+*     I_BYPASSING_BUFFER       = ' '
+*     I_BUFFER_ACTIVE          = ' '
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USER_COMMAND'
+      i_callback_top_of_page   = 'TOP_OF_PAGE'
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME         =
+*     I_BACKGROUND_ID          = ' '
+*     I_GRID_TITLE             = ' '
+*     I_GRID_SETTINGS          =
+      is_layout                = ls_layout
+      it_fieldcat              = lt_fieldcat
+*     IT_EXCLUDING             =
+*     IT_SPECIAL_GROUPS        =
+*     IT_SORT                  =
+*     IT_FILTER                =
+*     IS_SEL_HIDE              =
+*     I_DEFAULT                = 'X'
+*     I_SAVE                   = ' '
+*     IS_VARIANT               =
+*     IT_EVENTS                =
+*     IT_EVENT_EXIT            =
+*     IS_PRINT                 =
+*     IS_REPREP_ID             =
+*     I_SCREEN_START_COLUMN    = 0
+*     I_SCREEN_START_LINE      = 0
+*     I_SCREEN_END_COLUMN      = 0
+*     I_SCREEN_END_LINE        = 0
+*     I_HTML_HEIGHT_TOP        = 0
+*     I_HTML_HEIGHT_END        = 0
+*     IT_ALV_GRAPHICS          =
+*     IT_HYPERLINK             =
+*     IT_ADD_FIELDCAT          =
+*     IT_EXCEPT_QINFO          =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*   IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER  =
+*     ES_EXIT_CAUSED_BY_USER   =
+    TABLES
+      t_outtab                 = lt_spfli
+*   EXCEPTIONS
+*     PROGRAM_ERROR            = 1
+*     OTHERS                   = 2
+    .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.
+
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'PF_AIR'.
+ENDFORM.
+
+FORM user_command  USING r_ucomm LIKE sy-ucomm
+                                  rs_selfield TYPE slis_selfield.
+  CASE r_ucomm.
+    WHEN 'EDIT'.
+      PERFORM edit_alv.
+    WHEN '&DATA_SAVE'.
+      PERFORM save_data USING rs_selfield.
+    WHEN '&BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+ENDFORM.
+
+FORM top_of_page.
+
+  DATA lv_count(30) TYPE c.
+
+  CLEAR lt_list_comment.
+  DESCRIBE TABLE lt_spfli LINES lv_count.
+  CONCATENATE 'No. of records :' lv_count INTO DATA(lv_text) SEPARATED BY space.
+  ls_list_comment-typ = 'A'.
+  ls_list_comment-info = lv_text.
+  APPEND ls_list_comment TO lt_list_comment.
+  CLEAR ls_list_comment.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      it_list_commentary = lt_list_comment
+*     I_LOGO             =
+*     I_END_OF_LIST_GRID =
+*     I_ALV_FORM         =
+    .
+
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  EDIT_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM edit_alv.
+
+  IF lv_mode IS INITIAL.
+
+    LOOP AT lt_fieldcat INTO ls_fieldcat.
+      IF ls_fieldcat-fieldname NE 'MANDT' OR ls_fieldcat-fieldname NE 'CARRID' OR ls_fieldcat-fieldname NE 'CONNID'.
+        ls_fieldcat-edit = 'X'.
+        MODIFY lt_fieldcat FROM ls_fieldcat TRANSPORTING edit.
+      ENDIF.
+    ENDLOOP.
+    lv_mode = abap_true.
+    PERFORM display_alv.
+  ELSE.
+    lv_mode = abap_false.
+    LEAVE TO SCREEN 0.
+  ENDIF.
+
+
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save_data USING rs_selfield TYPE slis_selfield.
+
+  DATA: ls_spfli_old TYPE spfli.
+  DATA: ls_spfli_new TYPE spfli.
+  DATA: lt_spfli_upd TYPE TABLE OF spfli.
+  DATA lv_response TYPE char1.
+
+  LOOP AT lt_spfli INTO ls_spfli_new.
+    READ TABLE lt_spfli_old INTO ls_spfli_old INDEX sy-tabix.
+    CHECK sy-subrc IS INITIAL.
+    IF ls_spfli_old <> ls_spfli_new.
+      APPEND ls_spfli_new TO lt_spfli_upd.
+      CLEAR: ls_spfli_new, ls_spfli_old.
+    ENDIF.
+  ENDLOOP.
+  " lt_splfi_upd contains all records where there is a change
+  CHECK lt_spfli_upd IS NOT INITIAL.
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar      = 'Save Data Changes'
+*     DIAGNOSE_OBJECT       = ' '
+      text_question = 'Data Was Changed. Save the changes.'
+      text_button_1 = 'Ja'(001)
+*     ICON_BUTTON_1 = ' '
+      text_button_2 = 'Nein'(002)
+*     ICON_BUTTON_2 = ' '
+*     DEFAULT_BUTTON        = '1'
+*     display_cancel_button = 'X'
+*     USERDEFINED_F1_HELP   = ' '
+      start_column  = 25
+      start_row     = 6
+*     POPUP_TYPE    =
+*     IV_QUICKINFO_BUTTON_1 = ' '
+*     IV_QUICKINFO_BUTTON_2 = ' '
+    IMPORTING
+      answer        = lv_response.
+
+  CASE lv_response.
+    WHEN 1.
+      UPDATE zspfli FROM TABLE lt_spfli_upd.
+      IF sy-subrc = 0.
+        COMMIT WORK.
+        CLEAR lt_spfli_upd.
+        lt_spfli_old = lt_spfli.
+      ELSE.
+        ROLLBACK WORK.
+        lt_spfli = lt_spfli_old.
+
+        CLEAR lv_mode.
+        LEAVE TO SCREEN 0.
+      ENDIF.
+
+    WHEN 2.
+      lt_spfli = lt_spfli_old.
+      rs_selfield-refresh = abap_true. "It refreshes internal table data with new values
+      CLEAR lv_mode.
+      LEAVE TO SCREEN 0.
+    WHEN OTHERS.
+      "Nothing
+  ENDCASE.
+
+
+
+
+ENDFORM.
