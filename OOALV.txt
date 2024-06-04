@@ -665,3 +665,335 @@ MODULE user_command_0100 INPUT.
   ENDIF.
 ENDMODULE.
 
+
+
+
+
+
+Sample Code: Double-Click & Hotspot
+REPORT z31_ooalv1.
+
+DATA: container TYPE REF TO cl_gui_custom_container,
+      grid1     TYPE REF TO cl_gui_alv_grid.
+
+DATA: lo_cont2 TYPE REF TO cl_gui_custom_container,
+      lo_grid2 TYPE REF TO cl_gui_alv_grid.
+
+DATA: lt_index_rows TYPE lvc_t_row,
+      ls_index_rows TYPE lvc_s_row.
+
+DATA : lt_fieldcat TYPE lvc_t_fcat,
+       ls_fieldcat TYPE lvc_s_fcat,
+       ls_layout   TYPE lvc_s_layo.
+
+DATA : lt_fieldcat2 TYPE lvc_t_fcat,
+       ls_fieldcat2 TYPE lvc_s_fcat.
+
+TYPES : BEGIN OF str_spf,
+          carrid    TYPE s_carr_id,
+          countryfr TYPE land1,
+          cityfrom  TYPE s_from_cit,
+        END OF str_spf.
+
+DATA : lt_spf TYPE TABLE OF str_spf,
+       ls_spf TYPE str_spf.
+
+TYPES : BEGIN OF str_sfli,
+          icon     TYPE char4,
+          carrid   TYPE s_carr_id,
+          connid   TYPE s_conn_id,
+          fldate   TYPE s_date,
+          price    TYPE s_price,
+          currency TYPE s_currcode,
+          seatsmax TYPE s_seatsmax,
+          seatsocc TYPE s_seatsocc,
+        END OF str_sfli.
+
+DATA : lt_sfli TYPE TABLE OF str_sfli,
+       ls_sfli TYPE str_sfli.
+
+
+CLASS handle_event DEFINITION.
+
+  PUBLIC SECTION.
+    METHODS handle_double_click FOR EVENT double_click OF cl_gui_alv_grid IMPORTING es_row_no. "DOuble-Click Handler Method
+    METHODS handle_hotspot_click FOR EVENT hotspot_click OF cl_gui_alv_grid IMPORTING es_row_no. "Hotspot-Click Handler Method
+    METHODS handle_toolbar FOR EVENT toolbar OF cl_gui_alv_grid IMPORTING e_object. "TOOLBAR handler method
+    METHODS handle_user_command FOR EVENT user_command OF cl_gui_alv_grid IMPORTING e_ucomm. "User-Commnad handler method
+
+ENDCLASS.
+
+CLASS handle_event IMPLEMENTATION.
+
+  METHOD handle_double_click. "Event Handler Method to process the double-click request
+
+    READ TABLE lt_sfli INTO ls_sfli INDEX es_row_no-row_id.
+
+    REFRESH lt_spf.
+
+    SELECT carrid countryfr cityfrom
+      FROM spfli
+      INTO TABLE lt_spf
+      WHERE carrid EQ ls_sfli-carrid.
+
+    CALL SCREEN '0200'.
+
+  ENDMETHOD.
+
+  METHOD handle_hotspot_click. "Event Handler Method to process the Hotspot-click request
+
+    READ TABLE lt_sfli INTO ls_sfli INDEX es_row_no-row_id.
+
+    REFRESH lt_spf.
+
+    SELECT carrid countryfr cityfrom
+      FROM spfli
+      INTO TABLE lt_spf
+      WHERE carrid EQ ls_sfli-carrid.
+
+    CALL SCREEN '0200'.
+
+  ENDMETHOD.
+
+  METHOD handle_toolbar.  "Event Handler Method for assigning Custom Buttons to ALV Toolbar
+
+    DATA: ls_button TYPE stb_button.
+
+    CLEAR ls_button.
+    ls_button-function = 'MSG'.
+    ls_button-quickinfo = 'Greeting Message'.
+    ls_button-butn_type = 0.
+    ls_button-disabled = 'Message'.
+    ls_button-text = 'MSG'.
+    ls_button-icon = '@3I@'.
+    APPEND ls_button TO e_object->mt_toolbar.
+
+  ENDMETHOD.
+
+  METHOD handle_user_command. "Event Handler Method to process the User Command of ALV Toolbar Custom Buttons
+
+    CASE e_ucomm.
+      WHEN 'MESSAGE'.
+        MESSAGE | Welcome to SAP World. | TYPE 'I'.
+      WHEN OTHERS.
+        "Nothing
+    ENDCASE.
+
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  SELECT carrid    " Airline Code
+  connid    " Flight Connection Number
+  fldate    " Flight date
+  price     " Airfare
+  currency  " Local currency of airline
+  seatsmax  " Maximum capacity in economy class
+  seatsocc  " Occupied seats in economy class
+  FROM z31_sflight   " Flight
+  INTO CORRESPONDING FIELDS OF TABLE lt_sfli.
+
+  PERFORM populate_records.
+
+  CALL SCREEN '0100'.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+
+  SET PF-STATUS 'Z31_AIR'.
+
+  IF container IS INITIAL.
+
+    CREATE OBJECT container EXPORTING container_name = 'CONT'. "CONT --> Name of the Screen CustCtrl Name to Link Container
+    CREATE OBJECT grid1 EXPORTING i_parent = container . "Pass the object of Parent Container
+
+*******************************************fieldcatalog creation creation
+    ls_fieldcat-col_pos = 1.
+    ls_fieldcat-fieldname = 'ICON'.
+    ls_fieldcat-scrtext_l = 'Occupency Status'.
+    ls_fieldcat-icon = 'X'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 2.
+    ls_fieldcat-fieldname = 'CARRID'.
+    ls_fieldcat-scrtext_l = 'Airline Code'.
+    ls_fieldcat-key ='X'.
+    ls_fieldcat-hotspot = abap_true.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 3.
+    ls_fieldcat-fieldname = 'CONNID'.
+    ls_fieldcat-scrtext_l = 'Flight Connection Number'.
+    ls_fieldcat-key ='X'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 4.
+    ls_fieldcat-fieldname = 'FLDATE'.
+    ls_fieldcat-scrtext_l = 'Flight date'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 5.
+    ls_fieldcat-fieldname = 'PRICE'.
+    ls_fieldcat-scrtext_l = 'Price'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 6.
+    ls_fieldcat-fieldname = 'CURRENCY'.
+    ls_fieldcat-scrtext_l = 'Currency Key'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 7.
+    ls_fieldcat-fieldname = 'SEATSMAX'.
+    ls_fieldcat-scrtext_l = 'Maximum capacity in economy class'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = 8.
+    ls_fieldcat-fieldname = 'SEATSOCC'.
+    ls_fieldcat-scrtext_l = 'Occupied seats in economy class'.
+    APPEND ls_fieldcat TO lt_fieldcat.
+    CLEAR ls_fieldcat.
+
+
+***********************************layout of fieldcat
+    ls_layout-grid_title = 'Airline Table Data'.
+    ls_layout-sel_mode = 'A'. "Provide Multiple Selection in ALV Display
+    ls_layout-cwidth_opt = 'X'. "Optimize column width
+
+*********************************** Registering the Events
+
+
+    DATA ob1 TYPE REF TO handle_event.
+    CREATE OBJECT ob1.
+
+    SET HANDLER ob1->handle_double_click FOR grid1. "Registering the Double-Click Event for Grid1
+    SET HANDLER ob1->handle_hotspot_click FOR grid1. "Registering the Hotspot-Click Event for Grid1
+    SET HANDLER OB1->HANDLE_TOOLBAR FOR GRID1.  "Registering the Tool Bar Event for assigning the Custom Button to the ALV Grid ToolBar
+    SET HANDLER ob1->handle_user_command FOR grid1. "Registering the User-Command Event for Grid1
+
+*********************************** ALV Display
+    CALL METHOD grid1->set_table_for_first_display
+      EXPORTING
+        is_layout                     = ls_layout
+      CHANGING
+        it_outtab                     = lt_sfli
+        it_fieldcatalog               = lt_fieldcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+    IF sy-subrc <> 0.
+*     Implement suitable error handling here
+    ENDIF.
+
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+    WHEN 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN OTHERS.
+      "NOTHING.
+  ENDCASE.
+
+ENDMODULE.
+
+FORM populate_records .
+
+  LOOP AT lt_sfli INTO ls_sfli.
+    IF ls_sfli-seatsocc LT 200.
+      ls_sfli-icon = icon_green_light.
+    ELSEIF ls_sfli-seatsocc BETWEEN 200 AND 400.
+      ls_sfli-icon = icon_yellow_light.
+    ELSE.
+      ls_sfli-icon = icon_red_light.
+    ENDIF.
+    MODIFY lt_sfli FROM ls_sfli TRANSPORTING icon.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0200  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0200 OUTPUT.
+  SET PF-STATUS 'ZPF_TEST'.
+
+  REFRESH lt_fieldcat2.
+
+  ls_fieldcat2-col_pos = 1.
+  ls_fieldcat2-fieldname = 'CARRID'.
+  ls_fieldcat2-scrtext_l = 'Airline Code'.
+  APPEND ls_fieldcat2 TO lt_fieldcat2.
+  CLEAR ls_fieldcat2.
+
+  ls_fieldcat2-col_pos = 2.
+  ls_fieldcat2-fieldname = 'LAND1'.
+  ls_fieldcat2-scrtext_l = 'Country From'.
+  APPEND ls_fieldcat2 TO lt_fieldcat2.
+  CLEAR ls_fieldcat2.
+
+  ls_fieldcat2-col_pos = 3.
+  ls_fieldcat2-fieldname = 'CITYFROM'.
+  ls_fieldcat2-scrtext_l = 'Departure city'.
+  APPEND ls_fieldcat2 TO lt_fieldcat2.
+  CLEAR ls_fieldcat2.
+
+  CREATE OBJECT lo_cont2 EXPORTING container_name = 'CONT2'.
+
+  CREATE OBJECT lo_grid2 EXPORTING i_parent = lo_cont2.
+
+  CALL METHOD lo_grid2->set_table_for_first_display
+    CHANGING
+      it_outtab                     = lt_spf
+      it_fieldcatalog               = lt_fieldcat2
+*     it_sort                       =
+*     it_filter                     =
+    EXCEPTIONS
+      invalid_parameter_combination = 1
+      program_error                 = 2
+      too_many_lines                = 3
+      OTHERS                        = 4.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0200  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0200 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+    WHEN OTHERS.
+      "NOTHING
+  ENDCASE.
+ENDMODULE.
+
+
