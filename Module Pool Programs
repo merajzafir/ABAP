@@ -33,3 +33,60 @@ ENDMODULE.
 
 
 
+*&---------------------------------------------------------------------*
+*& Modulpool  Z31_MODULE3
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+" Modal Dialog Box Screen
+PROGRAM z31_module3.
+TABLES: scarr, sflight.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  IF sy-ucomm = 'DIALOG'.
+    CALL SCREEN 0101 STARTING AT 10 20 ENDING AT 40 80.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0101  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0101 INPUT.
+  IF sy-ucomm = 'BACK'.
+    LEAVE TO SCREEN 0.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  DATA_FETCH  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE data_fetch OUTPUT.
+  IF scarr-carrid IS NOT INITIAL.
+
+    SELECT SINGLE carrid, connid, fldate
+      FROM sflight
+      INTO @DATA(ls_sfli)
+      WHERE carrid = @scarr-carrid.
+
+    IF ls_sfli IS NOT INITIAL.
+      sflight-carrid = ls_sfli-carrid.
+      sflight-connid = ls_sfli-connid.
+      sflight-fldate = ls_sfli-fldate.
+    ENDIF.
+
+  ENDIF.
+ENDMODULE.
+
+
+
+
+
+
