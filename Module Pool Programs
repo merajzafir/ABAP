@@ -1,0 +1,35 @@
+*&---------------------------------------------------------------------*
+*& Module Pool       Z31_MODULE2
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+" Sub-Screen Program
+PROGRAM z31_module2.
+TABLES: scarr, sflight.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  IF sy-ucomm = 'OKAY'.
+    SELECT SINGLE carrid, connid, fldate
+      FROM sflight
+      INTO @DATA(ls_sfli)
+      WHERE carrid = @scarr-carrid.
+
+    IF ls_sfli IS NOT INITIAL.
+        sflight-carrid = ls_sfli-carrid.
+        sflight-connid = ls_sfli-connid.
+        sflight-fldate = ls_sfli-fldate.
+    ENDIF.
+
+  ENDIF.
+ENDMODULE.
+
+
+
+
+
