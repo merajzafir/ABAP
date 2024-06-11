@@ -15,6 +15,8 @@ DATA: LO_BCS           TYPE REF TO CL_BCS,
 DATA: LT_TEXT               TYPE SOLI_TAB,
       LS_TEXT               TYPE SOLI,
       LV_ATTACHMENT_SUBJECT TYPE SO_OBJ_DES,
+      lt_attachment_header  TYPE soli_tab,
+      ls_attachment_header  TYPE SOLI,
       LV_RESULT             TYPE OS_BOOLEAN.
 
 CLASS ZCL_ITAB_TO_EXCEL DEFINITION FINAL.
@@ -183,13 +185,16 @@ START-OF-SELECTION.
 
 *7) ADD THE ATTACHMENT
   LV_ATTACHMENT_SUBJECT = 'EXPORT_EXCEL'. "Attachemt File Name
+  CONCATENATE lv_attachment_subject '.xlsx' INTO data(file_extension).
+  ls_attachment_header-line = file_extension.
+  APPEND ls_attachment_header TO lt_attachment_header.
   TRY.
       CALL METHOD LO_DOCUMENT->ADD_ATTACHMENT       "Adding the Attachment
         EXPORTING
           I_ATTACHMENT_TYPE    = 'XLS'
           I_ATTACHMENT_SIZE    = CONV #( XSTRLEN( LV_XSTRING ) )
           I_ATTACHMENT_SUBJECT = LV_ATTACHMENT_SUBJECT
-          I_ATTACHMENT_HEADER  = VALUE #( ( LINE = 'Flights.xlsx' ) )
+          I_ATTACHMENT_HEADER  = lt_attachment_header "VALUE #( ( line = 'Flights.xlsx' ) )
           I_ATT_CONTENT_HEX    = LT_BINARY_TAB.     "Passing the Binary Format of BIN_FILE
     CATCH CX_DOCUMENT_BCS .
   ENDTRY.
