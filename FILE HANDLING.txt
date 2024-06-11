@@ -304,3 +304,85 @@ START-OF-SELECTION.
 
 
 
+*&---------------------------------------------------------------------*
+*& Report Z31_FILE_HANDLING
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT z31_file_handling.
+
+TYPES: BEGIN OF str_data,
+         carrid(10) TYPE c,
+         connid(10) TYPE c,
+         fldate(10) TYPE c,
+         price(10)  TYPE c,
+       END OF str_data.
+DATA: lt_final TYPE TABLE OF str_data,
+      ls_final TYPE str_data.
+
+PARAMETERS: p_file TYPE localfile.
+
+DATA lt_data TYPE TABLE OF alsmex_tabline.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  CALL FUNCTION 'F4_FILENAME'
+    EXPORTING
+      program_name  = syst-cprog
+      dynpro_number = syst-dynnr
+      field_name    = ' '
+    IMPORTING
+      file_name     = p_file.
+
+
+START-OF-SELECTION.
+*  CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'   "Converts Excel Data to Internal Table Data
+*    EXPORTING
+**     I_FIELD_SEPERATOR    =
+**     I_LINE_HEADER        =
+*      i_tab_raw_data       = lt_raw_data
+*      i_filename           = p_file
+*    TABLES
+*      i_tab_converted_data = lt_data
+**   EXCEPTIONS
+**     CONVERSION_FAILED    = 1
+**     OTHERS               = 2
+*    .
+*  IF sy-subrc <> 0.
+** Implement suitable error handling here
+*  ENDIF.
+*
+*  DELETE lt_data INDEX 1.
+
+  CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    EXPORTING
+      filename                = p_file
+      i_begin_col             = 1
+      i_begin_row             = 2
+      i_end_col               = 9999
+      i_end_row               = 9999
+    TABLES
+      intern                  = lt_data
+    EXCEPTIONS
+      inconsistent_parameters = 1
+      upload_ole              = 2
+      OTHERS                  = 3.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+  LOOP AT lt_data INTO DATA(ls_data).
+    CASE ls_data-col.
+      WHEN 1.
+        ls_final-carrid = ls_data-value.
+      WHEN 2.
+        ls_final-connid = ls_data-value.
+      WHEN 3.
+        ls_final-fldate = | { ls_data-value+6(4) }{ ls_data-value+3(2) }{ ls_data-value+0(2) }|.
+      WHEN 4.
+        ls_final-price = ls_data-value.
+    ENDCASE.
+    APPEND ls_final TO lt_final.
+  ENDLOOP.
+
+  cl_demo_output=>display( lt_final ).
+
