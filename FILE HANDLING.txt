@@ -381,7 +381,14 @@ START-OF-SELECTION.
       WHEN 4.
         ls_final-price = ls_data-value.
     ENDCASE.
-    APPEND ls_final TO lt_final.
+
+    READ TABLE lt_final INDEX ls_data-row TRANSPORTING NO FIELDS.
+    IF sy-subrc = 0.
+      MODIFY lt_final FROM ls_final INDEX ls_data-row.
+    ELSE.
+      APPEND ls_final TO lt_final.
+    ENDIF
+
   ENDLOOP.
 
   cl_demo_output=>display( lt_final ).
