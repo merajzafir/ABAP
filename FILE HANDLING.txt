@@ -99,7 +99,7 @@ CALL FUNCTION 'GUI_DOWNLOAD'
 
 
 
-***********************Writing Data into File on SAP Server
+*******************************Writing Data into File on SAP Server
 REPORT Z31_FH3.
 
 PARAMETERS: p_carrid TYPE s_carr_id.
@@ -129,10 +129,59 @@ IF SY-SUBRC = 0.
   CLOSE DATASET lv_filename.
 ENDIF.
 
+*****************************************************************************************************************************************************
+begin of ls_ttyp,
+       tariftyp   type etta-tariftyp,
+       ttypbez    type ettat-ttypbez,
+       sparte     type etta-sparte,
+       aklasse    type etta-aklasse,
+       gasabart   type etta-gasabart,
+       mwstmbez   type etta-mwstmbez,
+       backbi     type etta-backbi,
+*      numperbb    TYPE etta-numperbb,
+       numperbb   type char5,
+       perendbi   type etta-perendbi,
+*      numperpeb   TYPE etta-numperpeb,
+       numperpeb  type char5,
+*      difpbpeb    TYPE etta-difpbpeb,
+       difpbpeb   type char5,
+       ausgrup    type etta-ausgrup,
+       schemanr   type etta-schemanr,
+       hochart    type etta-hochart,
+       vpergrup   type etta-vpergrup,
+       pruefgr    type etta-pruefgr,
+       abssteu    type etta-abssteu,
+*      erdat       TYPE etta-erdat,
+       erdat      type char10,
+       ernam      type etta-ernam,
+*      aedat       TYPE etta-aedat,
+       aedat      type char10,
+       aenam      type etta-aenam,
+       begru      type etta-begru,
+       loevm      type etta-loevm,
+       endprio    type etta-endprio,
+       stagruttyp type etta-stagruttyp,
+       biadvance  type etta-biadvance,
+       dypercon   type etta-dypercon,
+     end of ls_ttyp,
 
+lt_ttyp       like table of ls_ttyp.
+h_dsn                like rlgrap-filename,
+PARAMETERS: p_dsn  LIKE rlgrap-filename DEFAULT '/austausch/P68/WVK/'.
 
-
-
+* Tariftyp allgemein
+      IF lt_ttyp IS NOT INITIAL.
+        CLEAR h_dsn.
+        CONCATENATE p_dsn sy-sysid '_' lc_zwttyp INTO h_dsn.
+        OPEN DATASET h_dsn FOR OUTPUT IN TEXT MODE ENCODING DEFAULT.
+        LOOP AT lt_ttyp INTO ls_ttyp.
+          TRANSFER ls_ttyp TO h_dsn.
+          CLEAR: ls_ttyp.
+        ENDLOOP.
+        CLOSE DATASET h_dsn. CLEAR h_dsn.
+        CLEAR : lt_ttyp[].
+      ENDIF.
+*****************************************************************************************************************************************************
 
 
 
