@@ -73,6 +73,24 @@ START-OF-SELECTION.
   GET REFERENCE OF LT_DATA INTO DATA(LO_DATA_REF). "Getting The Reference of Data Internal Table
   DATA(LV_XSTRING) = NEW ZCL_ITAB_TO_EXCEL( )->ITAB_TO_XSTRING( LO_DATA_REF ). "Excel XSTRING of Data Internal Table
 
+  "Another Simplest Way to get Excel Xstring of Data Internal Table
+**  TRY.
+*  CALL METHOD cl_salv_table=>factory
+**    EXPORTING
+**      list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+**      r_container    =
+**      container_name =
+*    IMPORTING
+*      r_salv_table   = lo_alv
+*    CHANGING
+*      t_table        = LT_DATA
+*      .
+**   CATCH cx_salv_msg .
+**  ENDTRY.
+*
+*  data(LV_XSTRING) = lo_alv->to_xml( if_salv_bs_xml=>c_type_xlsx ).
+
+
 *1) Convert the XSTRING Format to Binary Format
   CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'    "Converting BIN_FILE from XSTRING Format to Binary Format
     EXPORTING
