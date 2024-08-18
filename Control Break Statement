@@ -1,0 +1,62 @@
+REPORT z31_ctrl_brk_st.
+
+DATA lv_vbeln TYPE vbak-vbeln.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS so_vbeln FOR lv_vbeln.
+SELECTION-SCREEN END OF BLOCK b1.
+
+TYPES : BEGIN OF ty_vbap,
+          vbeln  TYPE vbap-vbeln,
+          posnr  TYPE vbap-posnr,
+          kwmeng TYPE vbap-kwmeng,
+          meins  TYPE vbap-meins,
+          netwr  TYPE vbap-netwr,
+        END OF ty_vbap.
+DATA : v1 TYPE vbap-netwr,
+       v2 TYPE vbap-netwr.
+DATA : wa_vbap TYPE ty_vbap,
+       it_vbap TYPE TABLE OF ty_vbap.
+
+START-OF-SELECTION.
+SELECT VBELN
+       POSNR
+       KWMENG
+       MEINS
+       NETWR
+       FROM VBAP
+       INTO TABLE IT_VBAP
+       WHERE VBELN IN SO_VBELN.
+SORT IT_VBAP BY VBELN.
+
+LOOP AT it_vbap INTO wa_vbap.
+  " AT FIRST / ENDAT
+  AT FIRST.
+    WRITE : 'These are sales order deatails'.
+  ENDAT.
+
+  AT NEW vbeln.
+    WRITE :/ wa_vbap-vbeln COLOR 6.
+
+  ENDAT.
+
+  WRITE :/
+           wa_vbap-posnr COLOR 5,
+           wa_vbap-kwmeng COLOR 4,
+           wa_vbap-meins COLOR 3,
+           wa_vbap-netwr COLOR 7.
+
+
+  v1 = v1 + wa_vbap-netwr.
+  v2 = v2 + wa_vbap-netwr.
+  AT END OF vbeln.
+    WRITE :/ 'SUB TOTAL', 33 v1 COLOR 1.
+    CLEAR v1.
+  ENDAT.
+
+  AT LAST.
+    WRITE: / 'GRAND TOTAL', 33 v2 COLOR 2.
+  ENDAT.
+
+
+ENDLOOP.
