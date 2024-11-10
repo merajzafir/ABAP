@@ -52,26 +52,26 @@ MESSAGE | { lv_text } { lv_output } | TYPE 'I'.
 
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////    Display Multiple check box in a single Line
 REPORT Z31_SELECTION_SCREEN.
 
 " Multiple Checkbox on Single Line
 PARAMETERS: p_d1 TYPE i DEFAULT 100 OBLIGATORY,
             p_d2 TYPE i DEFAULT 20 OBLIGATORY.
 
-SELECTION-SCREEN BEGIN OF LINE. " USed to align mutiple input fields in single line
+SELECTION-SCREEN BEGIN OF LINE. " Used to align multiple input fields in a single line
 
   SELECTION-SCREEN POSITION 5.
   PARAMETERS Plus AS CHECKBOX DEFAULT abap_true.
-  SELECTION-SCREEN COMMENT 7(8) TEXT-001. "Used to Dislay Text for Input Parameters
+  SELECTION-SCREEN COMMENT 7(8) TEXT-001. "Used to Display Text for Input Parameters
 
   SELECTION-SCREEN POSITION 20.
   PARAMETERS Minus AS CHECKBOX.
-  SELECTION-SCREEN COMMENT 22(8) TEXT-002. "Used to Dislay Text for Input Parameters
+  SELECTION-SCREEN COMMENT 22(8) TEXT-002. "Used to Display Text for Input Parameters
 
   SELECTION-SCREEN POSITION 35.
   PARAMETERS Multiply AS CHECKBOX.
-  SELECTION-SCREEN COMMENT 37(8) TEXT-003. "Used to Dislay Text for Input Parameters
+  SELECTION-SCREEN COMMENT 37(8) TEXT-003. "Used to Display Text for Input Parameters
 
 SELECTION-SCREEN END OF LINE.
 
