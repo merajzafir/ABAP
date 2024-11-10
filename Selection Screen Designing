@@ -52,7 +52,7 @@ MESSAGE | { lv_text } { lv_output } | TYPE 'I'.
 
 
 
-/////////////////////////////////////////////////////////    Display Multiple check box in a single Line
+/////////////////////////////////////////////////////////    Display Multiple check box in a Single Line
 REPORT Z31_SELECTION_SCREEN.
 
 " Multiple Checkbox on Single Line
@@ -97,7 +97,7 @@ MESSAGE | Plus { lv_output1 } Minus { lv_output2 } Mulyiply { lv_output3 } | TYP
 
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////   Block with Frame, Title, SKIP, Text symbol
 report z31_selection_screen.
 
 selection-screen begin of block b1 with frame. "Simple Block
