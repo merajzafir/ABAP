@@ -1,0 +1,57 @@
+  METHOD /iwbep/if_mgw_appl_srv_runtime~get_expanded_entityset.
+
+    " Deep Structure
+    DATA: BEGIN OF ltt_expand.
+            INCLUDE TYPE zcl_zpurchase_order_mpc=>ts_po_header.
+    DATA: POHeadtoPOItem TYPE zcl_zpurchase_order_mpc=>tt_po_items,
+          END OF ltt_expand.
+
+    DATA: lt_expand LIKE TABLE OF ltt_expand,
+          ls_expand like ltt_expand,
+          lt_po_head TYPE TABLE OF ZST_PO_HEAD,
+          ls_header TYPE ZST_PO_HEAD,
+          lt_po_item TYPE TABLE OF ZST_PO_ITEMS,
+          ls_itemdata TYPE ZST_PO_ITEMS,
+          ls_item TYPE zcl_zpurchase_order_mpc=>ts_po_items,
+          wa_sl_opt TYPE LINE OF /IWBEP/T_MGW_SELECT_OPTION.
+
+    CONSTANTS: lc_expand_tech_clause TYPE string VALUE 'POHeadtoPOItem'.
+
+    SELECT * FROM ekko INTO CORRESPONDING FIELDS OF TABLE lt_po_head.
+    SORT lt_po_head by ebeln.
+
+    IF  lt_po_head[] IS NOT INITIAL.
+      SELECT * FROM ekpo INTO CORRESPONDING FIELDS OF TABLE lt_po_item
+        FOR ALL ENTRIES IN lt_po_head
+        WHERE ebeln = lt_po_head-ebeln.
+
+        SORT lt_po_item by ebeln ebelp.
+    ENDIF.
+
+    LOOP AT lt_po_head INTO ls_header.
+
+      MOVE-CORRESPONDING ls_header to ls_expand.
+
+      LOOP AT lt_po_item INTO ls_itemdata WHERE ebeln = ls_header-ebeln.
+
+        MOVE-CORRESPONDING ls_itemdata TO ls_item.
+        APPEND ls_item to ls_expand-poheadtopoitem.
+        clear ls_item.
+
+      ENDLOOP.
+
+      APPEND ls_expand to lt_expand.
+      CLEAR ls_expand.
+
+    ENDLOOP.
+
+    copy_data_to_ref(
+      EXPORTING
+        is_data = lt_expand
+      CHANGING
+        cr_data = er_entityset
+    ).
+
+    INSERT lc_expand_tech_clause INTO TABLE et_expanded_tech_clauses.
+
+  ENDMETHOD.
