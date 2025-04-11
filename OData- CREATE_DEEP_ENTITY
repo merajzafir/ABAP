@@ -1,0 +1,39 @@
+  METHOD /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+
+    " Deep Structure
+    DATA: BEGIN OF deep_str.
+            INCLUDE TYPE zcl_zpurchase_order_mpc=>ts_po_header.
+    DATA:   POHeadtoPOItem TYPE zcl_zpurchase_order_mpc=>tt_po_items,
+          END OF deep_str.
+
+    DATA: ls_deep    LIKE deep_str,
+          ls_po_hd   TYPE ztb_po_hd,
+          ls_po_item TYPE ztb_po_item,
+          lt_po_item TYPE TABLE OF ztb_po_item,
+          wa_items   TYPE zcl_zpurchase_order_mpc=>ts_po_items.
+
+    io_data_provider->read_entry_data(
+      IMPORTING
+        es_data = ls_deep ).
+
+    MOVE-CORRESPONDING ls_deep TO ls_po_hd.
+
+    LOOP AT ls_deep-poheadtopoitem INTO wa_items.
+
+      MOVE-CORRESPONDING wa_items TO ls_po_item.
+      APPEND ls_po_item TO lt_po_item.
+
+    ENDLOOP.
+
+    INSERT INTO ztb_po_hd VALUES ls_po_hd.
+
+    INSERT ztb_po_item FROM TABLE lt_po_item.
+
+    copy_data_to_ref(
+      EXPORTING
+        is_data = ls_deep
+      CHANGING
+        cr_data = er_deep_entity
+    ).
+
+  ENDMETHOD.
