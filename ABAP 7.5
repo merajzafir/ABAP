@@ -1,5 +1,4 @@
 /////////////////////////////////// IF <--> COND
-
 DATA: lv_vbeln TYPE vbeln_va.
 
 SELECT-OPTIONS s_vbeln FOR lv_vbeln.
@@ -19,5 +18,17 @@ LOOP AT lt_vbak ASSIGNING FIELD-SYMBOL(<fs_vbak>).
   WRITE : <fs_vbak>-vbeln, lv_text.
 
 ENDLOOP.
+
+
+/////////////////////////////////////////////////  CASE <--> SWITCH
+PARAMETERS: P_INPUT TYPE I.
+
+* CASE <--> SWITCH
+DATA(lv_month) =  SWITCH char20( p_input WHEN 1 THEN 'JAN'
+                                         WHEN 2 THEN 'FEB'
+                                         WHEN 3 THEN 'MAR'
+                                         WHEN 4 THEN 'APR'
+                                         ELSE 'Other Month').
+WRITE lv_month.
 
 
