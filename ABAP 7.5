@@ -1,0 +1,23 @@
+/////////////////////////////////// IF <--> COND
+
+DATA: lv_vbeln TYPE vbeln_va.
+
+SELECT-OPTIONS s_vbeln FOR lv_vbeln.
+
+SELECT vbeln,
+       netwr
+  FROM vbak
+  INTO TABLE @DATA(lt_vbak)
+  WHERE vbeln IN @s_vbeln.
+
+LOOP AT lt_vbak ASSIGNING FIELD-SYMBOL(<fs_vbak>).
+
+  " IF <--> COND
+  DATA(lv_text) = COND char20( WHEN <fs_vbak>-netwr GE 0 AND <fs_vbak>-netwr LE 5000 THEN 'Low Prio'
+                               WHEN <fs_vbak>-netwr > 5000 AND <fs_vbak>-netwr LE 10000 THEN 'High Prio' ).
+
+  WRITE : <fs_vbak>-vbeln, lv_text.
+
+ENDLOOP.
+
+
