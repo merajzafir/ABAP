@@ -32,3 +32,12 @@ DATA(lv_month) =  SWITCH char20( p_input WHEN 1 THEN 'JAN'
 WRITE lv_month.
 
 
+///////////////////////////////////////  String Expression as a Replacement of CONCATENATE
+data lv_output(30) TYPE c.
+
+" String Expression as a Replacement of CONCATENATE
+lv_output = |Welcome { sy-uname } To ABAP|.
+
+WRITE lv_output.
+
+
