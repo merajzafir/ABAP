@@ -41,3 +41,22 @@ lv_output = |Welcome { sy-uname } To ABAP|.
 WRITE lv_output.
 
 
+/////////////////////////////////////// VALUE Expression as a Replacement of APPEND
+TYPES: BEGIN OF lty_data,
+       eid(10) TYPE N,
+       ename(40) TYPE c,
+       END OF lty_data.
+       
+TYPES: ltty_data TYPE TABLE OF lty_data WITH EMPTY KEY.
+
+" VALUE Expression as a Replacement of APPEND
+data(ls_data) = VALUE lty_data(  eid = 1 ename = 'Meraj' ).  "Structure Type
+
+data(lt_data) = VALUE ltty_data( ( eid = 1 ename = 'Meraj' )
+                                 ( eid = 2 ename = 'Adnan' )
+                                 ( eid = 3 ename = 'Homa' )
+                               ).   "Table Type
+
+
+
+
