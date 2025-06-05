@@ -76,3 +76,24 @@ lt_data = VALUE #( ( eid = 1 ename = 'Meraj' )
 lt_data = VALUE #( BASE lt_data ( eid = 4 ename = 'Zafir' ) ).
 
 
+
+//////////////////////////////////////// Corresponding Operator
+TYPES: BEGIN OF lty_data2,
+       vbeln TYPE vbeln_va,
+       uname TYPE ernam,
+       vbtyp TYPE vbtypl,
+       END OF lty_data2.
+
+data: lv_vbeln TYPE vbeln_va,
+      lt_data2 TYPE TABLE of lty_data2.
+
+select-OPTIONS s_vbeln FOR lv_vbeln.
+
+SELECT vbeln, erdat, erzet, ernam, vbtyp
+FROM vbak
+INTO TABLE @data(lt_data1)
+WHERE vbeln in @s_vbeln.
+
+" Corresponding Operator
+lt_data2 = CORRESPONDING #( lt_data1 MAPPING uname = ernam EXCEPT vbtyp ).
+
