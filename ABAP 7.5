@@ -97,3 +97,20 @@ WHERE vbeln in @s_vbeln.
 " Corresponding Operator
 lt_data2 = CORRESPONDING #( lt_data1 MAPPING uname = ernam EXCEPT vbtyp ).
 
+
+
+
+//////////////////////////////////////// ALPHA Keyword with IN or OUT
+DATA: lv_input1(10) TYPE c,
+      lv_input2(10) TYPE c.
+
+" ALPHA IN
+lv_input1 = '12345'.
+lv_input1 = |{ lv_input1 ALPHA = IN }|.
+WRITE: lv_input1.
+
+" ALPHA OUT
+lv_input2 = '00006789'.
+lv_input2 = |{ lv_input2 ALPHA = OUT }|.
+
+WRITE: lv_input2.
