@@ -14,7 +14,8 @@
            gc_content_type_f  TYPE string VALUE 'content-type'.
 
 
-    " Fetch URL
+    " Fetch URL --> TCODE : stvarv
+
     SELECT SINGLE high FROM tvarvc INTO @DATA(lv_url) WHERE name = 'ZFI_SAP_FS_URL'  AND low = @sy-sysid.
     " Get Api Key
     SELECT SINGLE high FROM tvarvc INTO @DATA(lv_apikey) WHERE name = 'ZFI_SAP_FS_APIKEY'  AND low = @sy-sysid.
