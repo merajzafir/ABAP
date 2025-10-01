@@ -1,0 +1,163 @@
+  METHOD send_data.
+    DATA: lv_api_rate    TYPE i,
+          lv_json        TYPE string,
+          lv_response    TYPE string,
+          " lv_api_key
+          lv_url_string  TYPE string,
+          lv_timestamp   TYPE timestamp,
+          lv_status_code TYPE i.
+
+    DATA : gc_http_status_f   TYPE string VALUE '~status_code',
+           gc_status_reason_f TYPE string VALUE '~status_reason',
+           gc_content_len_f   TYPE string VALUE '~content-length',
+           gc_location_f      TYPE string VALUE 'location',
+           gc_content_type_f  TYPE string VALUE 'content-type'.
+
+
+    " Fetch URL
+    SELECT SINGLE high FROM tvarvc INTO @DATA(lv_url) WHERE name = 'ZFI_SAP_FS_URL'  AND low = @sy-sysid.
+    " Get Api Key
+    SELECT SINGLE high FROM tvarvc INTO @DATA(lv_apikey) WHERE name = 'ZFI_SAP_FS_APIKEY'  AND low = @sy-sysid.
+
+    LOOP AT gt_asset INTO DATA(ls_asset).
+
+      READ TABLE gt_asset_details INTO DATA(ls_asset_details) WITH KEY bukrs = ls_asset-bukrs  anln1 = ls_asset-asset.
+      IF sy-subrc EQ 0.
+        DATA(lv_asset_desc) = ls_asset_details-txt50.
+        DATA(lv_asset_tag)  = ls_asset_details-invnr.
+        DATA(lv_productid) =  ls_asset_details-invzu.
+        DATA(lv_sernr) =      ls_asset_details-sernr.
+        DATA(lv_acquisition) = ls_asset_details-zugdt.
+      ENDIF.
+
+      READ TABLE gt_anep INTO DATA(ls_anep) WITH KEY bukrs = ls_asset-bukrs  anln1 = ls_asset-asset.
+      IF sy-subrc EQ 0.
+        DATA(lv_cost) = ls_anep-anbtr.
+      ENDIF.
+
+      DATA(ls_payload) = VALUE ty_header(
+                                           name          = lv_asset_desc
+                                           asset_type_id = 30000593359
+                                           asset_tag     = lv_asset_tag
+                                           impact        = 'low'
+                                           description   = lv_asset_desc
+                                           usage_type    = 'permanent'
+                                           type_fields   = VALUE ty_type_fields(
+                                                                                  product_30000593350             = lv_productid
+                                                                                  cost_30000593350                = lv_cost
+                                                                                  asset_state_30000593350         = 'In Stock'
+                                                                                  serial_number_30000593350       = lv_sernr
+                                                                                  asset_number_30000593359        = ls_asset-asset
+                                                                                  purchase_order_no_30000593359   = ls_asset-ebeln
+                                                                                  assets_tag_30000593359          = lv_asset_tag
+                                                                                  invoice_number_30000593359      = ls_asset-belnr
+                                                                                  acquisition_date_30000593350    = '2025-09-23T00:00:00Z'
+                                                                               )
+                                                                             ).
+      lv_url_string = CONV #( lv_url ).
+      cl_http_client=>create_by_url(
+        EXPORTING
+          url                =     lv_url_string
+        IMPORTING
+          client             =     DATA(lo_http_client)
+        EXCEPTIONS
+          argument_not_found = 1
+          plugin_not_active  = 2
+          internal_error     = 3
+          OTHERS             = 4 ).
+
+      IF sy-subrc <> 0.
+*==>If exception is occured then close communication
+        lo_http_client->close( ).
+      ENDIF.
+
+*==>If lo_http_client is bound then only proceed further
+      CHECK lo_http_client IS BOUND.
+      DATA(lo_rest_client) = NEW cl_rest_http_client( io_http_client = lo_http_client ).
+
+*==>Set HTTP Protocol Version 1.0
+      lo_http_client->request->set_version( if_http_request=>co_protocol_version_1_0 ).
+
+*==>Check lo_http_client, lo_rest_client are bound then only proceed further
+      CHECK lo_http_client IS BOUND AND lo_rest_client IS BOUND.
+
+      lv_json = /ui2/cl_json=>serialize(
+                data        = ls_payload
+                pretty_name = /ui2/cl_json=>pretty_mode-camel_case
+                compress    = abap_true ).
+
+*==>Create request entity
+      DATA(lo_request) = lo_rest_client->if_rest_client~create_request_entity( ).
+
+      CHECK lo_request IS BOUND.
+*==>Set Content type
+      lo_request->set_content_type( EXPORTING iv_media_type = if_rest_media_type=>gc_appl_json ).
+
+*==>get entity in Text Format
+      lo_request->set_string_data( iv_data = lv_json ).
+
+      lo_http_client->authenticate(
+        EXPORTING
+          username             =  CONV #( lv_apikey )
+          password             =  'X'
+      ).
+
+*==>Set Header Field for Authorization
+      "lo_request->set_header_field( EXPORTING iv_name  = 'Authorization' iv_value = lv_auth1 ).
+
+*==>Set Header Field for Content Type
+      lo_request->set_header_field( EXPORTING iv_name  = 'content-Type' iv_value = 'application/json' ).
+
+**==>Set Header Field for Accept
+*    lo_request->set_header_field( EXPORTING iv_name  = 'Accept' iv_value = '*/*' ).
+
+      DATA : lv_host1   TYPE string,
+             lv_length1 TYPE string.
+
+***    lo_request->set_header_field( EXPORTING iv_name = 'Host' iv_value = lv_host ).
+
+      " Set Content-Length manually
+*    lv_length1 = strlen( lv_body ).
+*    lo_request->set_header_field( EXPORTING iv_name = 'Content-Length' iv_value = lv_length1 ).
+
+****==>Set Header Field for Access Key ID
+***    lo_request->set_header_field( EXPORTING iv_name  = 'X-access-key-id' iv_value = gv_key_id ).  "Pending Key id
+***
+****==>Set Header Field for Access Key Secret
+***    lo_request->set_header_field( EXPORTING iv_name  = 'X-Access-Key-Secret' iv_value = gv_key_sec ).  "Pending Key Secret
+***
+
+      TRY.
+*==>Post
+          lo_rest_client->if_rest_resource~post( lo_request ).
+***        lo_rest_client->if_rest_resource~put( lo_request ).
+        CATCH cx_rest_client_exception.
+      ENDTRY.
+
+
+*==>Collect POST method response
+      DATA(lo_response1)             = lo_rest_client->if_rest_client~get_response_entity( ).
+      DATA(lv_http_status1)          = lo_response1->get_header_field( gc_http_status_f ).
+      DATA(lv_reason1)               = lo_response1->get_header_field( gc_status_reason_f ).
+      DATA(lv_content_length1)       = lo_response1->get_header_field( gc_content_len_f ).
+      DATA(lv_location1)             = lo_response1->get_header_field( gc_location_f ).
+      DATA(lv_content_type1)         = lo_response1->get_header_field( gc_content_type_f ).
+      DATA(lv_response1)             = lo_response1->get_string_data( ).
+      IF lv_http_status1 = 200.
+        lv_api_rate = lv_api_rate + 1.
+      ENDIF.
+      IF lv_api_rate MOD 40 = 0.
+        WAIT UP TO 60 SECONDS.
+      ENDIF.
+
+      ls_asset-payload = lv_json.
+      ls_asset-remarks = |{ lv_http_status1 }| & | - | & |{ lv_response1 }|.
+      ls_asset-status =  COND #( WHEN lv_http_status1 = 200 THEN 'S' ELSE 'F' ).
+      GET TIME STAMP FIELD lv_timestamp.
+      ls_asset-senttimestamp = lv_timestamp.
+      MODIFY gt_asset FROM ls_asset.
+      CLEAR : ls_payload, lv_asset_desc.
+    ENDLOOP.
+    MODIFY zfi_asset_fs_sap FROM TABLE gt_asset.
+  ENDMETHOD.
+ENDCLASS.
