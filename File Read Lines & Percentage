@@ -1,0 +1,28 @@
+lv_total = lines( it_knb1 ).
+
+lv_count = 0.
+
+LOOP AT it_knb1 INTO wa_knb1.
+
+  lv_count = lv_count + 1.
+
+  INSERT wa_knb1-kunnr INTO TABLE lt_all.
+
+  " Progress
+
+  IF lv_total > 0 AND ( lv_count MOD 100 = 0 OR lv_count = lv_total ).
+
+    lv_percent = ( lv_count * 100 ) / lv_total.
+
+    lv_text = |Processing Based On Company Code: { lv_count } of { lv_total } ({ lv_percent }%)|.
+
+    CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+
+      EXPORTING percentage = lv_percent
+
+                text       = lv_text.
+
+  ENDIF.
+
+ENDLOOP.
+ 
