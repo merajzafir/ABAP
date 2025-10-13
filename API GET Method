@@ -1,0 +1,223 @@
+REPORT zslack_sap_user_delete.
+
+TYPES: BEGIN OF ty_email,
+         suser    TYPE xubname,
+         email    TYPE ad_smtpadr,
+         noactive TYPE char1,
+       END OF ty_email.
+
+TYPES: BEGIN OF ty_json,
+         ok    TYPE string,
+         error TYPE string,
+       END OF ty_json.
+
+DATA: gt_email TYPE TABLE OF ty_email,
+      gs_email TYPE ty_email.
+
+START-OF-SELECTION.
+
+  PERFORM fetch_data.
+
+  PERFORM user_status.
+
+  PERFORM delete_user.
+
+*&---------------------------------------------------------------------*
+*&      Form  USER_STATUS
+*&---------------------------------------------------------------------*
+FORM user_status.
+
+  DATA: lv_api_rate       TYPE i,
+        lv_json           TYPE string,
+        lv_response       TYPE string,
+        lv_api_key_string TYPE string,
+        lv_url            TYPE string,
+        lv_timestamp      TYPE timestamp,
+        lv_status_code    TYPE i,
+        lv_host1          TYPE string,
+        lv_length1        TYPE string,
+        ls_json_data      TYPE ty_json.
+
+
+  DATA :  lv_status TYPE i,
+          lv_reason TYPE string,
+          gc_token  TYPE string VALUE 'xoxb-2151923894-9655719659926-J05s0NXqpecInj03S0f9ysbL'.
+
+  IF gt_email IS NOT INITIAL.
+
+    LOOP AT gt_email ASSIGNING FIELD-SYMBOL(<fs_email>).
+
+      "Check Slack deactivation via API
+      lv_url = |https://slack.com/api/users.lookupByEmail?email={ <fs_email>-email }|.
+
+      cl_http_client=>create_by_url(
+      EXPORTING
+        url                =     lv_url
+      IMPORTING
+        client             =     DATA(o_client)
+      EXCEPTIONS
+        argument_not_found = 1
+        plugin_not_active  = 2
+        internal_error     = 3
+        OTHERS             = 4 ).
+
+      IF sy-subrc <> 0.
+*==>If exception is occured then close communication
+        o_client->close( ).
+      ENDIF.
+
+      CHECK o_client IS BOUND.
+
+      o_client->request->set_method( method = if_http_request=>co_request_method_get ).
+
+      DATA(lv_auth) = |Bearer { gc_token }|.
+
+      o_client->request->set_header_field(
+      EXPORTING
+        name  =     'Authorization'
+        value =     lv_auth
+         ).
+
+      o_client->request->set_header_field(
+      EXPORTING
+      name  =     'content-Type'
+      value =     'application/json'
+       ).
+
+      " Send request
+      CALL METHOD o_client->send
+        EXCEPTIONS
+          http_communication_failure = 1
+          http_invalid_state         = 2
+          http_processing_failed     = 3
+          OTHERS                     = 4.
+      IF sy-subrc = 1.
+        MESSAGE 'HTTP Send Failed' TYPE 'E'.
+        RETURN.
+      ENDIF.
+
+      " Receive response
+      CALL METHOD o_client->receive
+        EXCEPTIONS
+          http_communication_failure = 1
+          http_invalid_state         = 2
+          http_processing_failed     = 3
+          OTHERS                     = 4.
+      IF sy-subrc = 1.
+        MESSAGE 'HTTP Receive Failed' TYPE 'E'.
+        RETURN.
+      ENDIF.
+
+      " Get status and response
+      o_client->response->get_status(
+        IMPORTING
+          code   =    lv_status
+          reason =    lv_reason
+      ).
+      IF lv_status = 200.
+        lv_response = o_client->response->get_cdata( ).
+      ENDIF.
+
+      " Close client
+      o_client->close( ).
+
+      "Parse JSON response
+      /ui2/cl_json=>deserialize(
+        EXPORTING
+          json             =     lv_response
+        CHANGING
+          data             =  ls_json_data
+          ).
+
+      IF ls_json_data-ok = abap_false AND ls_json_data-error = 'users_not_found'.
+
+        <fs_email>-noactive = abap_true.
+
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FETCH_DATA
+*&---------------------------------------------------------------------*
+FORM fetch_data .
+
+  SELECT bname, persnumber, addrnumber
+    FROM usr21
+    INTO TABLE @DATA(lt_usr).
+
+  IF lt_usr IS NOT INITIAL.
+
+    SELECT addrnumber, persnumber, smtp_addr AS email
+      FROM adr6
+      INTO TABLE @DATA(lt_adr)
+      FOR ALL ENTRIES IN @lt_usr
+      WHERE addrnumber = @lt_usr-addrnumber
+        AND persnumber = @lt_usr-persnumber.
+
+    IF lt_adr IS NOT INITIAL.
+
+      LOOP AT lt_adr ASSIGNING FIELD-SYMBOL(<fs_adr>).
+        READ TABLE lt_usr ASSIGNING FIELD-SYMBOL(<fs_usr>) WITH KEY addrnumber = <fs_adr>-addrnumber
+                                                                    persnumber = <fs_adr>-persnumber.
+        CLEAR gs_email.
+        gs_email-suser = <fs_usr>-bname.
+        gs_email-email = <fs_adr>-email.
+        APPEND gs_email TO gt_email.
+
+      ENDLOOP.
+
+    ENDIF.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DELETE_USER
+*&---------------------------------------------------------------------*
+FORM delete_user.
+
+  DATA: lt_return  TYPE TABLE OF bapiret2,
+        ls_del_log TYPE zsid_del_log.
+
+  IF gt_email IS NOT INITIAL.
+
+    LOOP AT gt_email ASSIGNING FIELD-SYMBOL(<fs_email>) WHERE noactive = abap_true.
+
+      CALL FUNCTION 'BAPI_USER_DELETE'
+        EXPORTING
+          username = <fs_email>-suser
+        TABLES
+          return   = lt_return.
+
+      LOOP AT lt_return ASSIGNING FIELD-SYMBOL(<fs_return>) WHERE type = 'A' OR type = 'E'.
+
+        CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+
+        CLEAR ls_del_log.
+        ls_del_log-suser = <fs_email>-suser.
+        ls_del_log-freetext = |Error occured for { <fs_email>-suser } during deletion|.
+        MODIFY zsid_del_log FROM ls_del_log.
+
+      ENDLOOP.
+      IF sy-subrc <> 0.
+
+        CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+          EXPORTING
+            wait = abap_true.
+
+        CLEAR ls_del_log.
+        ls_del_log-suser = <fs_email>-suser.
+        ls_del_log-freetext = |{ <fs_email>-suser } deleted successfully|.
+        MODIFY zsid_del_log FROM ls_del_log.
+
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.
