@@ -41,7 +41,7 @@ FORM user_status.
 
   DATA :  lv_status TYPE i,
           lv_reason TYPE string,
-          gc_token  TYPE string VALUE 'xoxb-2151923894-9655719659926-J05s0NXqpecInj03S0f9ysbL'.
+          gc_token  TYPE string VALUE 'meza-19971923894-96523429659926-J0dhfjXqpecInj03S0f9aedw'.
 
   IF gt_email IS NOT INITIAL.
 
