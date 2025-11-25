@@ -1,0 +1,493 @@
+REPORT zr_credible_sftp.
+
+TYPES: BEGIN OF ty_data,
+         anln0(12)   TYPE c,
+         s5_text(40) TYPE c,
+         aktiv(10)   TYPE c,
+         txt50(50)   TYPE c,
+         btr1(12)    TYPE c,
+         btr7(12)    TYPE c,
+         zzname1(35) TYPE c,
+       END OF ty_data.
+DATA gt_data TYPE TABLE OF ty_data.
+
+DATA: company_code TYPE bukrs,
+      date_range   TYPE budat,
+      fiscal_year  TYPE gjahr,
+      cap_date     TYPE aktivd,
+      asset_cls    TYPE anlkl,
+      gv_qua(2)    TYPE c,
+      gv_fy(4)     TYPE c.
+
+DATA : lt_final TYPE TABLE OF ztcredible.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+
+PARAMETERS: rb_ksb1 RADIOBUTTON GROUP rg DEFAULT 'X' USER-COMMAND uc1,
+            rb_far  RADIOBUTTON GROUP rg.
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK bk1 WITH FRAME TITLE text-001.
+SELECT-OPTIONS: s_code FOR company_code  MODIF ID mod,
+                s_date FOR date_range  MODIF ID mod.
+
+SELECTION-SCREEN SKIP.
+PARAMETERS: p_dis AS CHECKBOX DEFAULT 'X' MODIF ID mod,
+            p_all AS CHECKBOX MODIF ID mod.
+SELECTION-SCREEN END OF BLOCK bk1.
+
+SELECTION-SCREEN BEGIN OF BLOCK bk2 WITH FRAME.
+PARAMETERS: p_bukrs TYPE bukrs MODIF ID m2.
+
+SELECT-OPTIONS: so_anlkl FOR asset_cls MODIF ID m2,
+                so_aktiv FOR cap_date MODIF ID m2.
+SELECTION-SCREEN END OF BLOCK bk2.
+
+AT SELECTION-SCREEN OUTPUT.
+
+  LOOP AT SCREEN.
+    IF rb_ksb1 = 'X'.
+      IF screen-group1 = 'MOD'.
+        screen-active = 1.  " Visible and active
+      ENDIF.
+    ELSE.
+      IF screen-group1 = 'MOD'.
+        screen-active = 0.  " Hidden
+      ENDIF.
+    ENDIF.
+    IF rb_far = 'X'.
+      IF screen-group1 = 'M2'.
+        screen-active = 1.  " Visible and active
+      ENDIF.
+    ELSE.
+      IF screen-group1 = 'M2'.
+        screen-active = 0.  " Hidden
+      ENDIF.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+AT SELECTION-SCREEN.
+
+  IF p_all EQ abap_true AND p_dis EQ abap_true.
+    MESSAGE 'Select only one checkbox' TYPE 'E'.
+  ENDIF.
+
+START-OF-SELECTION.
+
+  IF rb_ksb1 = 'X'.
+
+    IF s_code IS INITIAL.
+      MESSAGE 'Please Provide Company Code' TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+
+    IF s_date IS INITIAL.
+      MESSAGE 'Please Provide Date Range' TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+
+    TRY.
+
+        zcl_credible_sftp=>fetch_data_ksb1(
+          EXPORTING
+            p_v_date       = s_date[]
+*      p_v_cost       =
+          IMPORTING
+            p_tt_ksb1_data =  lt_final   " Sap Credible Integration Table for KSB1 Data
+*      p_tt_data      =
+        ).
+    ENDTRY.
+
+    IF lt_final IS NOT INITIAL.
+      DELETE lt_final WHERE company_code NOT IN s_code[].
+*    SELECT * FROM ztcredible INTO TABLE @DATA(p_v_final)
+*                                 WHERE company_code IN @s_code
+*                                 AND   posting_date IN @s_date.
+**                                 AND   fiscal_year  = @p_year.
+
+    ENDIF.
+
+    IF  p_dis = 'X'.
+      PERFORM display_data.
+    ELSEIF p_all EQ abap_true.
+      PERFORM get_al11.
+    ENDIF.
+
+  ELSE.
+
+    IF p_bukrs IS INITIAL.
+      MESSAGE 'Please Provide Company Code' TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+
+    IF so_aktiv IS INITIAL.
+      MESSAGE 'Please Provide Date Range' TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+
+    IF so_aktiv-low+4(2) EQ '04' AND so_aktiv-high+4(2) EQ '06'.
+      gv_qua = 'Q1'.
+      gv_fy = |FY{ so_aktiv-low+2(2) }|.
+    ELSEIF so_aktiv-low+4(2) EQ '07' AND so_aktiv-high+4(2) EQ '09'.
+      gv_qua = 'Q2'.
+      gv_fy = |FY{ so_aktiv-low+2(2) }|.
+    ELSEIF so_aktiv-low+4(2) EQ '10' AND so_aktiv-high+4(2) EQ '12'.
+      gv_qua = 'Q3'.
+      gv_fy = |FY{ so_aktiv-low+2(2) }|.
+    ELSEIF so_aktiv-low+4(2) EQ '01' AND so_aktiv-high+4(2) EQ '03'.
+      gv_qua = 'Q4'.
+      DATA(lv_fy) = so_aktiv-low+2(2) - 1.
+      gv_fy = |FY{ so_aktiv-low+2(2) }|.
+    ELSE.
+      MESSAGE 'Please Extract Quaterly Data Only' TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+
+    PERFORM fetch_data_far.
+    PERFORM process_transfer.
+
+  ENDIF.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AL11
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_al11 .
+
+  IF lt_final IS NOT INITIAL.
+
+    DATA: lv_data   TYPE string,
+          lv_amount TYPE string,
+          gv_file   TYPE string,
+          lv_cnt    TYPE i VALUE '1'.
+
+    CONSTANTS lcn_comma(1) TYPE c VALUE ','.
+
+    LOOP AT lt_final ASSIGNING FIELD-SYMBOL(<fs-final>).
+
+      REPLACE ALL OCCURRENCES OF '"' IN <fs-final>-name WITH ''.
+      CONDENSE <fs-final>-name.
+
+    ENDLOOP.
+
+
+*    IF sy-sysid EQ 'DEV'.
+*      gv_file = '/blinkit/CREDIBL_OUT'.
+*    ELSEIF sy-sysid EQ 'QAS'.
+*      gv_file = '/blinkit/CREDIBL_OUT'.
+*    ELSEIF sy-sysid EQ 'PRD'.
+*      gv_file  = '/blinkit/CREDIBL_OUT'.
+*    ENDIF.
+
+    SELECT SINGLE high FROM tvarvc INTO gv_file WHERE name = 'ZFI_PROD_AL11_CREDBL_PATH' AND low = sy-sysid.
+
+    DATA(lv_line) = 'TXT'.
+    CONCATENATE gv_file '/Credible_OUT' '_'  sy-datum+6(2) sy-datum+4(2) sy-datum+0(4) '.' lv_line  INTO gv_file.
+
+    OPEN DATASET gv_file FOR OUTPUT IN TEXT MODE ENCODING DEFAULT .
+    IF sy-subrc NE 0.
+      MESSAGE 'Unable to create file' TYPE 'I'.
+      EXIT.
+    ENDIF.
+
+    LOOP AT lt_final INTO DATA(gs_final).
+
+      IF lv_cnt EQ 1.
+
+        lv_cnt = 0.
+
+        CONCATENATE 'COMPANY CODE' 'FISCAL YEAR' 'COST ELEMENT' 'COST ELEMENT NAME' 'COST ELEMENT DESCRIPTION'
+                    'TRANSACTION CURRENCY' 'OFFSETTING ACCOUNT NUMBER' 'NAME OF OFFSETTING ACCOUNT'
+                    'PERIOD FROM' 'PERIOD TO' 'NAME' INTO lv_data SEPARATED BY lcn_comma.
+      ELSE.
+        lv_amount = gs_final-transaction_currency.
+
+        CONCATENATE gs_final-company_code',' gs_final-fiscal_year ',' gs_final-cost_element ','
+          gs_final-cost_element_name ',' gs_final-cost_element_description ',' lv_amount ',' gs_final-offsetting_account_number ','
+          gs_final-name_of_offsetting_account ',' gs_final-period_from','  gs_final-period_to ',' gs_final-name
+          INTO lv_data.
+      ENDIF.
+
+      REPLACE ALL OCCURRENCES OF '#' IN lv_data WITH ''.
+
+      TRANSFER lv_data TO gv_file.
+      CLEAR : lv_amount.
+
+    ENDLOOP.
+
+    CLOSE DATASET gv_file.
+    CLEAR: gv_file,lv_data.
+    MESSAGE 'File Uploaded Successfully' TYPE 'S'.
+  ENDIF.
+*ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_data .
+
+  DATA :
+    lr_functions TYPE REF TO cl_salv_functions,
+    lr_columns   TYPE REF TO cl_salv_columns_table, "cl_salv_columns,
+    lo_column    TYPE REF TO cl_salv_column_table,
+    lo_layout    TYPE REF TO cl_salv_layout,
+    ls_key       TYPE  salv_s_layout_key.
+
+  IF lt_final IS NOT INITIAL.
+
+    TRY.
+        CALL METHOD cl_salv_table=>factory
+          IMPORTING
+            r_salv_table = DATA(lo_alvt)
+          CHANGING
+            t_table      = lt_final.
+      CATCH cx_salv_msg.
+    ENDTRY.
+
+    lr_functions = lo_alvt->get_functions( ).
+    lr_functions->set_all( abap_true ).
+    lr_columns = lo_alvt->get_columns( ).
+    lr_columns->set_optimize( 'X' ).
+
+    lo_layout = lo_alvt->get_layout( ).
+    ls_key-report = sy-repid.
+    lo_layout->set_key( ls_key ).
+    lo_layout->set_save_restriction( if_salv_c_layout=>restrict_none ).
+
+
+    lo_layout->set_default( abap_true ). " Optional: set default layout
+
+    lo_alvt->display( ).
+
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FETCH_DATA_FAR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM fetch_data_far.
+
+  DATA: lt_rspar TYPE TABLE OF rsparams,
+        ls_rspar TYPE rsparams,
+        lr_data  TYPE REF TO data,
+        lt_data  TYPE TABLE OF ty_data,
+        wa_data  TYPE ty_data,
+        gv_file  TYPE string.
+
+  FIELD-SYMBOLS: <fs_data> TYPE ANY TABLE,
+                 <ls_any>  TYPE any,
+                 <ls_out>  TYPE ty_data.
+
+  APPEND VALUE rsparams(
+                             selname = 'BUKRS'
+                             kind    = 'S'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = p_bukrs "'1010'   "Layout name
+                             ) TO lt_rspar.
+
+  lt_rspar = VALUE #( BASE lt_rspar
+             FOR ls_panlkl IN so_anlkl
+              (
+              selname = 'SO_ANLKL'
+              kind    = 'S'
+              low     = ls_panlkl-low
+              high    = ls_panlkl-high
+              sign    = ls_panlkl-sign
+              option  = ls_panlkl-option
+ ) ).
+
+  APPEND VALUE rsparams(
+                             selname = 'BERDATUM'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = '20260331'   "Layout name
+                             ) TO lt_rspar.
+
+  APPEND VALUE rsparams(
+                             selname = 'BEREICH1'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = '01'   "Layout name
+                             ) TO lt_rspar.
+
+  APPEND VALUE rsparams(
+                             selname = 'SRTVR'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = '0001'   "Layout name
+                             ) TO lt_rspar.
+
+  APPEND VALUE rsparams(
+                             selname = 'XEINZEL'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = 'X'   "Layout name
+                             ) TO lt_rspar.
+
+  APPEND VALUE rsparams(
+                             selname = 'P_GRID'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = 'X'   "Layout name
+                             ) TO lt_rspar.
+
+  lt_rspar = VALUE #( BASE lt_rspar
+             FOR ls_pdate IN so_aktiv
+              (
+              selname = 'SO_AKTIV'
+              kind    = 'S'
+              low     = ls_pdate-low
+              high    = ls_pdate-high
+              sign    = ls_pdate-sign
+              option  = ls_pdate-option
+ ) ).
+
+  APPEND VALUE rsparams(
+                             selname = 'PA_GITVS'
+                             kind    = 'P'
+                             sign    = 'I'
+                             option  = 'EQ'
+                             low     = '0001'   "Layout name
+                             ) TO lt_rspar.
+
+  IF lt_rspar IS NOT INITIAL.
+    cl_salv_bs_runtime_info=>set(
+      EXPORTING
+        display        = abap_false
+        metadata       = abap_false
+        data           = abap_true
+    ).
+
+    SUBMIT zragitt_alv01
+        WITH SELECTION-TABLE lt_rspar
+        EXPORTING LIST TO MEMORY
+        AND RETURN.
+
+*    WAIT UP TO 2 SECONDS .
+    TRY .
+        cl_salv_bs_runtime_info=>get_data_ref(
+          IMPORTING
+            r_data            = lr_data
+        ).
+
+        ASSIGN lr_data->* TO <fs_data>.
+        IF <fs_data> IS ASSIGNED.
+          CLEAR lt_data.
+          " Append LINES OF <fs_data> to p_tt_data.
+*            p_tt_data = <fs_data> .
+          LOOP AT <fs_data> ASSIGNING <ls_any>.
+            APPEND INITIAL LINE TO gt_data ASSIGNING <ls_out>.
+            MOVE-CORRESPONDING <ls_any> TO <ls_out>.
+          ENDLOOP.
+        ENDIF.
+      CATCH cx_salv_bs_sc_runtime_info .
+*          MESSAGE e000(zmm).
+    ENDTRY.
+    cl_salv_bs_runtime_info=>clear_all( ).
+  ENDIF.
+
+  IF gt_data IS NOT INITIAL.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  PROCESS_TRANSFER
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM process_transfer .
+
+  DATA: lv_data       TYPE string,
+        lv_amount     TYPE string,
+        gv_file       TYPE string,
+        lv_cnt        TYPE i VALUE '1',
+        lv_tstmp      TYPE timestamp,
+        time_stmp(15) TYPE c,
+        lv_entity(10) TYPE c.
+
+  CONSTANTS lcn_comma(1) TYPE c VALUE ','.
+
+  LOOP AT gt_data ASSIGNING FIELD-SYMBOL(<fs-data>).
+
+    DATA(lv_dat) = <fs-data>-aktiv.                         "20251104
+    CONDENSE lv_dat NO-GAPS.
+
+    CONCATENATE lv_dat+6(2) lv_dat+4(2) lv_dat+0(4) INTO <fs-data>-aktiv SEPARATED BY '.'.
+
+  ENDLOOP.
+
+  IF gt_data IS NOT INITIAL.
+
+    SELECT SINGLE high FROM tvarvc INTO gv_file WHERE name = 'ZFI_PROD_AL11_CREDBL_PATH' AND low = sy-sysid.
+
+    IF p_bukrs = '1010'.
+      lv_entity = 'ZL'.
+    ELSEIF p_bukrs = '7010'.
+      lv_entity = 'BCPL'.
+    ELSEIF p_bukrs = '1110'.
+      lv_entity = 'ZHPL'.
+    ENDIF.
+    CONDENSE lv_entity NO-GAPS.
+
+    GET TIME STAMP FIELD lv_tstmp.
+    time_stmp = lv_tstmp.
+
+    DATA(lv_line) = 'TXT'.
+    CONCATENATE gv_file '/' lv_entity '_' 'FAR' '_'  gv_qua '_' gv_fy '_' time_stmp '.' lv_line  INTO gv_file.
+
+    OPEN DATASET gv_file FOR OUTPUT IN TEXT MODE ENCODING DEFAULT .
+    IF sy-subrc NE 0.
+      MESSAGE 'Unable to create file' TYPE 'I'.
+      EXIT.
+    ENDIF.
+
+    LOOP AT gt_data INTO DATA(gs_data).
+
+      IF lv_cnt EQ 1.
+
+        lv_cnt = 0.
+
+        CONCATENATE 'Asset' 'Asset Class Name' 'Capitalized on' 'Asset description' 'APC FY start'
+                    'Current APC' 'Vendor Name' INTO lv_data SEPARATED BY lcn_comma.
+      ELSE.
+        CONCATENATE gs_data-anln0 gs_data-s5_text gs_data-aktiv gs_data-txt50
+                    gs_data-btr1 gs_data-btr7 gs_data-zzname1 INTO lv_data SEPARATED BY lcn_comma.
+      ENDIF.
+
+      TRANSFER lv_data TO gv_file.
+      CLEAR : lv_amount.
+
+    ENDLOOP.
+
+    CLOSE DATASET gv_file.
+    CLEAR: gv_file,lv_data.
+    MESSAGE 'File Uploaded Successfully' TYPE 'S'.
+
+  ENDIF.
+
+ENDFORM.
