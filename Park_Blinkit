@@ -1,0 +1,283 @@
+*&---------------------------------------------------------------------*
+*&  Include           Z31_PARK_BLK_TOP
+*&---------------------------------------------------------------------*
+
+TYPES: BEGIN OF ty_exl,
+         sno           TYPE string,
+         year          TYPE string,
+         doctype       TYPE string,
+         companycode   TYPE string,
+         currency      TYPE string,
+         invdate       TYPE string,
+         postingdate   TYPE string,
+         reference     TYPE string,
+         vendor        TYPE string,
+         vendorlinetxt TYPE string,
+         busplace      TYPE string,
+         seccode       TYPE string,
+         payterms      TYPE string,
+         paymethod     TYPE string,
+         docheadertext TYPE string,
+         placesupp     TYPE string,
+         glaccount     TYPE string,
+         itemtext      TYPE string,
+         amount        TYPE string,
+         busarea       TYPE string,
+         tradpartner   TYPE string,
+         costcenter    TYPE string,
+         hsncode       TYPE string,
+         taxcode       TYPE string,
+         wht_code      TYPE string,
+         base_amount   TYPE string,
+         xref1         TYPE string,
+         xref2         TYPE string,
+         pmnt_meth     TYPE string,
+         bvtyp         TYPE string,
+         comments      TYPE string,
+       END OF ty_exl.
+
+TYPES: BEGIN OF ty_data_disp,
+         sno           TYPE string,
+         year          TYPE string,
+         doctype       TYPE string,
+         companycode   TYPE string,
+         currency      TYPE string,
+         invdate       TYPE string,
+         postingdate   TYPE string,
+         reference     TYPE string,
+         vendor        TYPE string,
+         vendorlinetxt TYPE string,
+         busplace      TYPE string,
+         seccode       TYPE string,
+         payterms      TYPE string,
+         paymethod     TYPE string,
+         docheadertext TYPE string,
+         placesupp     TYPE string,
+         glaccount     TYPE string,
+         itemtext      TYPE string,
+         amount        TYPE string,
+         busarea       TYPE string,
+         tradpartner   TYPE string,
+         costcenter    TYPE string,
+         hsncode       TYPE string,
+         taxcode       TYPE string,
+         wht_code      TYPE string,
+         base_amount   TYPE string,
+         xref1         TYPE string,
+         xref2         TYPE string,
+         pmnt_meth     TYPE string,
+         bvtyp         TYPE string,
+         comments      TYPE string,
+       END OF ty_data_disp.
+
+TYPES: BEGIN OF ty_data_input,
+         sno           TYPE string,
+         year          TYPE gjahr,
+         doctype       TYPE blart,
+         companycode   TYPE bukrs,
+         currency      TYPE waers,
+         invdate       TYPE bldat,
+         postingdate   TYPE budat,
+         reference     TYPE xblnr,
+         vendor        TYPE newko,
+         vendorlinetxt TYPE zde_vend_lin_txt,
+         busplace      TYPE bupla,
+         seccode       TYPE secco,
+         payterms      TYPE acpi_zterm,
+         paymethod     TYPE schzw_bseg,
+         docheadertext TYPE bktxt,
+         placesupp     TYPE j_1ig_region,
+         glaccount     TYPE hkont,
+         itemtext      TYPE sgtxt,
+         amount        TYPE wrbtr,
+         busarea       TYPE gsber,
+         tradpartner   TYPE pargb,
+         costcenter    TYPE kostl,
+         hsncode       TYPE j_1ig_hsn_sac,
+         taxcode       TYPE mwskz,
+         wht_code      TYPE qsskz,
+         base_amount   TYPE wrbtr,
+         xref1         TYPE zde_xref1,
+         xref2         TYPE zde_xref2,
+         pmnt_meth     TYPE zde_pmnt_meth,
+         bvtyp         TYPE bvtyp,
+         comments      TYPE zde_comments,
+       END OF ty_data_input.
+
+DATA: gt_filedisplay TYPE STANDARD TABLE OF zfi_t_file_park.
+
+DATA : gt_exl        TYPE TABLE OF ty_exl,
+       gs_exl        TYPE          ty_exl,
+       gt_item       TYPE TABLE OF ty_exl,
+       gs_item       TYPE          ty_exl,
+       lt_error_disp TYPE TABLE OF ty_data_disp.
+
+DATA : gt_type    TYPE truxs_t_text_data.
+
+SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+
+PARAMETERS: rb_dwnld RADIOBUTTON GROUP rg1 DEFAULT 'X' USER-COMMAND uc1,
+            rb_upld  RADIOBUTTON GROUP rg1 .
+
+SELECTION-SCREEN: END OF BLOCK b1.
+
+SELECTION-SCREEN: BEGIN OF BLOCK b2 WITH FRAME.
+
+PARAMETERS: p_file TYPE rlgrap-filename MODIF ID MOD.
+
+SELECTION-SCREEN: END OF BLOCK b2.
+
+AT SELECTION-SCREEN OUTPUT.
+
+  LOOP AT SCREEN.
+    IF rb_upld = 'X'.
+      IF screen-group1 = 'MOD'.
+        screen-active = 1.  " Visible and active
+      ENDIF.
+    ELSE.
+      IF screen-group1 = 'MOD'.
+        screen-active = 0.  " Hidden
+      ENDIF.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+
+  CALL FUNCTION 'F4_FILENAME'     "This FM gives the pop-up of the file explorer and returns the path of the chosen file.
+    EXPORTING
+      program_name  = syst-cprog
+      dynpro_number = syst-dynnr
+      field_name    = ' '
+    IMPORTING
+      file_name     = p_file.
+
+START-OF-SELECTION.
+CASE abap_true.
+
+  WHEN rb_dwnld.
+    PERFORM download_format.
+
+  WHEN rb_upld.
+    PERFORM upload_data.
+
+ENDCASE.
+
+FORM download_format.
+
+  DATA : gs_download TYPE ty_exl,
+         l_file_w    TYPE string,
+         gt_download TYPE STANDARD TABLE OF ty_exl.
+
+
+  CALL METHOD cl_gui_frontend_services=>directory_browse
+    CHANGING
+      selected_folder      = l_file_w
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      not_supported_by_gui = 3
+      OTHERS               = 4.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+  CONCATENATE l_file_w '\Park_Document_Blk.xls' INTO l_file_w.
+
+  gs_download-sno = 'Sno'.
+  gs_download-year = 'Year'.
+  gs_download-doctype = 'Document Type'.
+  gs_download-companycode = 'Compnay Code'.
+  gs_download-currency = 'Currency'.
+  gs_download-invdate = 'Document Date'.
+  gs_download-postingdate = 'Posting Date'.
+  gs_download-reference = 'Reference'.
+  gs_download-vendor = 'Vendor'.
+  gs_download-vendorlinetxt = 'VendorLine Text'.
+  gs_download-busplace = 'Bus Place'.
+  gs_download-seccode = 'Sec Code'.
+  gs_download-payterms = 'Pay Terms'.
+  gs_download-paymethod = 'Pay Method'.
+  gs_download-docheadertext = 'DocHeaderText'.
+  gs_download-placesupp = 'Place Supp'.
+  gs_download-glaccount = 'GLAccount'.
+  gs_download-itemtext = 'ItemText'.
+  gs_download-amount = 'Amount'.
+  gs_download-busarea = 'Business Area'.
+  gs_download-tradpartner = 'Trad Partner'.
+  gs_download-costcenter = 'Cost Center'.
+  gs_download-hsncode = 'HSN Code'.
+  gs_download-taxcode = 'Tax Code'.
+  gs_download-wht_code = 'WHT Code'.
+  gs_download-base_amount = 'Base Amount'.
+  gs_download-xref1 = 'Ref1'.
+  gs_download-xref2 = 'Ref2'.
+  gs_download-pmnt_meth = 'Pay Method'.
+  gs_download-bvtyp = 'Partner Bank Type'.
+  gs_download-comments = 'Comments'.
+  APPEND gs_download TO gt_download.
+
+  CALL METHOD cl_gui_frontend_services=>gui_download
+    EXPORTING
+      filename                = l_file_w
+      write_field_separator   = 'X'
+    CHANGING
+      data_tab                = gt_download
+    EXCEPTIONS
+      file_write_error        = 1
+      no_batch                = 2
+      gui_refuse_filetransfer = 3
+      invalid_type            = 4
+      no_authority            = 5
+      unknown_error           = 6
+      header_not_allowed      = 7
+      separator_not_allowed   = 8
+      filesize_not_allowed    = 9
+      header_too_long         = 10
+      dp_error_create         = 11
+      dp_error_send           = 12
+      dp_error_write          = 13
+      unknown_dp_error        = 14
+      access_denied           = 15
+      dp_out_of_memory        = 16
+      disk_full               = 17
+      dp_timeout              = 18
+      file_not_found          = 19
+      dataprovider_exception  = 20
+      control_flush_error     = 21
+      not_supported_by_gui    = 22
+      error_no_gui            = 23
+      OTHERS                  = 24.
+  IF sy-subrc EQ 0.
+    MESSAGE 'File Downloaded Successfully' TYPE 'S' DISPLAY LIKE 'S'.
+    LEAVE LIST-PROCESSING.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  UPLOAD_DATA
+*&---------------------------------------------------------------------*
+FORM upload_data .
+
+  CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+    EXPORTING
+      i_field_seperator    = ' '
+      i_line_header        = 'X'
+      i_tab_raw_data       = gt_type
+      i_filename           = p_file
+    TABLES
+      i_tab_converted_data = gt_exl
+    EXCEPTIONS
+      conversion_failed    = 1
+      OTHERS               = 2.
+  IF sy-subrc <> 0.
+    MESSAGE 'File not converted' TYPE 'E'.
+  ENDIF.
+
+  IF gt_exl IS NOT INITIAL.
+    SORT gt_exl BY sno.
+    gt_item = gt_exl.
+    DELETE ADJACENT DUPLICATES FROM gt_exl COMPARING sno.
+  ENDIF.
+
+ENDFORM.
