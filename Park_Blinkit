@@ -1,129 +1,52 @@
-*&---------------------------------------------------------------------*
-*&  Include           Z31_PARK_BLK_TOP
-*&---------------------------------------------------------------------*
+REPORT zr_clear_doc.
 
 TYPES: BEGIN OF ty_exl,
-         sno           TYPE string,
-         year          TYPE string,
-         doctype       TYPE string,
-         companycode   TYPE string,
-         currency      TYPE string,
-         invdate       TYPE string,
-         postingdate   TYPE string,
-         reference     TYPE string,
-         vendor        TYPE string,
-         vendorlinetxt TYPE string,
-         busplace      TYPE string,
-         seccode       TYPE string,
-         payterms      TYPE string,
-         paymethod     TYPE string,
-         docheadertext TYPE string,
-         placesupp     TYPE string,
-         glaccount     TYPE string,
-         itemtext      TYPE string,
-         amount        TYPE string,
-         busarea       TYPE string,
-         tradpartner   TYPE string,
-         costcenter    TYPE string,
-         hsncode       TYPE string,
-         taxcode       TYPE string,
-         wht_code      TYPE string,
-         base_amount   TYPE string,
-         xref1         TYPE string,
-         xref2         TYPE string,
-         pmnt_meth     TYPE string,
-         bvtyp         TYPE string,
-         comments      TYPE string,
+         vendor       TYPE string,
+         clear_date   TYPE string,
+         period       TYPE string,
+         comp_code    TYPE string,
+         gl_indicator TYPE string,
+         doc1         TYPE string,
+         doc2         TYPE string,
+         text         TYPE string,
        END OF ty_exl.
 
-TYPES: BEGIN OF ty_data_disp,
-         sno           TYPE string,
-         year          TYPE string,
-         doctype       TYPE string,
-         companycode   TYPE string,
-         currency      TYPE string,
-         invdate       TYPE string,
-         postingdate   TYPE string,
-         reference     TYPE string,
-         vendor        TYPE string,
-         vendorlinetxt TYPE string,
-         busplace      TYPE string,
-         seccode       TYPE string,
-         payterms      TYPE string,
-         paymethod     TYPE string,
-         docheadertext TYPE string,
-         placesupp     TYPE string,
-         glaccount     TYPE string,
-         itemtext      TYPE string,
-         amount        TYPE string,
-         busarea       TYPE string,
-         tradpartner   TYPE string,
-         costcenter    TYPE string,
-         hsncode       TYPE string,
-         taxcode       TYPE string,
-         wht_code      TYPE string,
-         base_amount   TYPE string,
-         xref1         TYPE string,
-         xref2         TYPE string,
-         pmnt_meth     TYPE string,
-         bvtyp         TYPE string,
-         comments      TYPE string,
-       END OF ty_data_disp.
+DATA : gt_exl  TYPE TABLE OF ty_exl,
+       gs_exl  TYPE          ty_exl,
+       gt_item TYPE TABLE OF ty_exl,
+       gs_item TYPE          ty_exl.
 
-TYPES: BEGIN OF ty_data_input,
-         sno           TYPE string,
-         year          TYPE gjahr,
-         doctype       TYPE blart,
-         companycode   TYPE bukrs,
-         currency      TYPE waers,
-         invdate       TYPE bldat,
-         postingdate   TYPE budat,
-         reference     TYPE xblnr,
-         vendor        TYPE newko,
-         vendorlinetxt TYPE zde_vend_lin_txt,
-         busplace      TYPE bupla,
-         seccode       TYPE secco,
-         payterms      TYPE acpi_zterm,
-         paymethod     TYPE schzw_bseg,
-         docheadertext TYPE bktxt,
-         placesupp     TYPE j_1ig_region,
-         glaccount     TYPE hkont,
-         itemtext      TYPE sgtxt,
-         amount        TYPE wrbtr,
-         busarea       TYPE gsber,
-         tradpartner   TYPE pargb,
-         costcenter    TYPE kostl,
-         hsncode       TYPE j_1ig_hsn_sac,
-         taxcode       TYPE mwskz,
-         wht_code      TYPE qsskz,
-         base_amount   TYPE wrbtr,
-         xref1         TYPE zde_xref1,
-         xref2         TYPE zde_xref2,
-         pmnt_meth     TYPE zde_pmnt_meth,
-         bvtyp         TYPE bvtyp,
-         comments      TYPE zde_comments,
-       END OF ty_data_input.
+DATA: ls_bdcdata TYPE bdcdata,
+      lt_bdcdata TYPE TABLE OF bdcdata.
 
-DATA: gt_filedisplay TYPE STANDARD TABLE OF zfi_t_file_park.
+TYPES: BEGIN OF ty_alv,
+         vendor     TYPE string,
+         clear_date TYPE string,
+         doc1       TYPE string,
+         doc2       TYPE string,
+         clear_doc TYPE string,
+         status     TYPE string,
+       END OF ty_alv.
 
-DATA : gt_exl        TYPE TABLE OF ty_exl,
-       gs_exl        TYPE          ty_exl,
-       gt_item       TYPE TABLE OF ty_exl,
-       gs_item       TYPE          ty_exl,
-       lt_error_disp TYPE TABLE OF ty_data_disp.
+DATA: gt_final TYPE TABLE OF ty_alv,
+      gs_final TYPE ty_alv.
 
-DATA : gt_type    TYPE truxs_t_text_data.
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA : gt_type TYPE truxs_t_text_data,
+       lv_msg  TYPE string.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
 
 PARAMETERS: rb_dwnld RADIOBUTTON GROUP rg1 DEFAULT 'X' USER-COMMAND uc1,
-            rb_upld  RADIOBUTTON GROUP rg1 .
+            rb_upld  RADIOBUTTON GROUP rg1.
 
 SELECTION-SCREEN: END OF BLOCK b1.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b2 WITH FRAME.
 
-PARAMETERS: p_file TYPE rlgrap-filename MODIF ID MOD.
+PARAMETERS: p_file TYPE rlgrap-filename MODIF ID mod.
 
 SELECTION-SCREEN: END OF BLOCK b2.
 
@@ -152,16 +75,21 @@ AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
     IMPORTING
       file_name     = p_file.
 
+
 START-OF-SELECTION.
-CASE abap_true.
 
-  WHEN rb_dwnld.
-    PERFORM download_format.
+  CASE abap_true.
 
-  WHEN rb_upld.
-    PERFORM upload_data.
+    WHEN rb_dwnld.
+      PERFORM download_format.
 
-ENDCASE.
+    WHEN rb_upld.
+      PERFORM upload_data.
+      PERFORM clear_doc.
+      PERFORM display_alv.
+
+  ENDCASE.
+
 
 FORM download_format.
 
@@ -182,39 +110,16 @@ FORM download_format.
 * Implement suitable error handling here
   ENDIF.
 
-  CONCATENATE l_file_w '\Park_Document_Blk.xls' INTO l_file_w.
+  CONCATENATE l_file_w '\Clear_Doc' sy-datum '.xls' INTO l_file_w.
 
-  gs_download-sno = 'Sno'.
-  gs_download-year = 'Year'.
-  gs_download-doctype = 'Document Type'.
-  gs_download-companycode = 'Compnay Code'.
-  gs_download-currency = 'Currency'.
-  gs_download-invdate = 'Document Date'.
-  gs_download-postingdate = 'Posting Date'.
-  gs_download-reference = 'Reference'.
   gs_download-vendor = 'Vendor'.
-  gs_download-vendorlinetxt = 'VendorLine Text'.
-  gs_download-busplace = 'Bus Place'.
-  gs_download-seccode = 'Sec Code'.
-  gs_download-payterms = 'Pay Terms'.
-  gs_download-paymethod = 'Pay Method'.
-  gs_download-docheadertext = 'DocHeaderText'.
-  gs_download-placesupp = 'Place Supp'.
-  gs_download-glaccount = 'GLAccount'.
-  gs_download-itemtext = 'ItemText'.
-  gs_download-amount = 'Amount'.
-  gs_download-busarea = 'Business Area'.
-  gs_download-tradpartner = 'Trad Partner'.
-  gs_download-costcenter = 'Cost Center'.
-  gs_download-hsncode = 'HSN Code'.
-  gs_download-taxcode = 'Tax Code'.
-  gs_download-wht_code = 'WHT Code'.
-  gs_download-base_amount = 'Base Amount'.
-  gs_download-xref1 = 'Ref1'.
-  gs_download-xref2 = 'Ref2'.
-  gs_download-pmnt_meth = 'Pay Method'.
-  gs_download-bvtyp = 'Partner Bank Type'.
-  gs_download-comments = 'Comments'.
+  gs_download-clear_date = 'Clearing Date'.
+  gs_download-period = 'Period'.
+  gs_download-comp_code = 'Company Code'.
+  gs_download-gl_indicator = 'G/L Indicators'.
+  gs_download-doc1 = 'Document No. 1'.
+  gs_download-doc2 = 'Document No. 2'.
+  gs_download-text = 'Text'.
   APPEND gs_download TO gt_download.
 
   CALL METHOD cl_gui_frontend_services=>gui_download
@@ -253,10 +158,10 @@ FORM download_format.
     LEAVE LIST-PROCESSING.
   ENDIF.
 
+
 ENDFORM.
-*&---------------------------------------------------------------------*
-*&      Form  UPLOAD_DATA
-*&---------------------------------------------------------------------*
+
+
 FORM upload_data .
 
   CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
@@ -275,9 +180,247 @@ FORM upload_data .
   ENDIF.
 
   IF gt_exl IS NOT INITIAL.
-    SORT gt_exl BY sno.
+    SORT gt_exl BY vendor.
     gt_item = gt_exl.
-    DELETE ADJACENT DUPLICATES FROM gt_exl COMPARING sno.
+    DELETE ADJACENT DUPLICATES FROM gt_exl COMPARING vendor.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM clear_doc .
+
+  DATA: ls_messtab TYPE bdcmsgcoll,
+        lt_messtab TYPE TABLE OF bdcmsgcoll,
+        lc_n(1)    TYPE c VALUE 'N',
+        lc_a(1)    TYPE c VALUE 'A',
+        lc_dot(1)  TYPE c VALUE '.'.
+
+  LOOP AT gt_exl INTO gs_exl.
+
+*    PERFORM bdc_dynpro      USING 'SAPMF05A' '0131'.
+**    PERFORM bdc_field       USING 'BDC_OKCODE'
+**                                  '/ERW'.
+*    PERFORM bdc_field       USING 'BDC_CURSOR'
+*                                  'RF05A-AGUMS'.
+*    PERFORM bdc_dynpro      USING 'SAPLSPO1' '0200'.
+*    PERFORM bdc_field       USING 'BDC_OKCODE'
+*                                  '=YES'.
+*  PERFORM bdc_transaction USING 'F-44'.
+*    REFRESH: lt_messtab.
+*    CALL TRANSACTION 'F-44' USING lt_bdcdata
+*                     MODE   lc_n
+*                     UPDATE lc_a
+*                     MESSAGES INTO lt_messtab.
+
+    PERFORM bdc_dynpro      USING 'SAPMF05A' '0131'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'RF05A-XPOS1(03)'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '/00'.
+    PERFORM bdc_field       USING 'RF05A-AGKON'
+                                  gs_exl-vendor."'600000002'.  "Account No
+    PERFORM bdc_field       USING 'BKPF-BUDAT'
+                                  gs_exl-clear_date."'09.12.2025'. "Clearing Date
+    PERFORM bdc_field       USING 'BKPF-MONAT'
+                                  gs_exl-period."'9'.          "Period
+    PERFORM bdc_field       USING 'BKPF-BUKRS'
+                                  gs_exl-comp_code."'7010'.       "Company Code
+    PERFORM bdc_field       USING 'BKPF-WAERS'
+                                  'INR'.
+    PERFORM bdc_field       USING 'RF05A-AGUMS'
+                                  gs_exl-gl_indicator."'A'.          "Special G/L Indicators
+    PERFORM bdc_field       USING 'RF05A-XNOPS'
+                                  'X'.
+    PERFORM bdc_field       USING 'RF05A-XPOS1(01)'
+                                  ''.
+    PERFORM bdc_field       USING 'RF05A-XPOS1(03)'
+                                  'X'.
+    PERFORM bdc_dynpro      USING 'SAPMF05A' '0731'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'RF05A-SEL01(02)'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '/00'.
+    PERFORM bdc_field       USING 'RF05A-SEL01(01)'
+                                  gs_exl-doc1."'1900000002'.     "Doc 1
+    PERFORM bdc_field       USING 'RF05A-SEL01(02)' "Doc 2
+                                  gs_exl-doc2."'1700000000'.
+    PERFORM bdc_dynpro      USING 'SAPMF05A' '0731'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'RF05A-SEL01(01)'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=PA'.
+    PERFORM bdc_dynpro      USING 'SAPDF05X' '3100'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=REST'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'DF05B-PSSKT(01)'.
+    PERFORM bdc_dynpro      USING 'SAPDF05X' '3100'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=PI'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'DF05B-PSDIF(01)'.
+    PERFORM bdc_dynpro      USING 'SAPDF05X' '3100'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=BS'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'DF05B-PSDIF(01)'.
+    PERFORM bdc_dynpro      USING 'SAPMF05A' '0700'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'RF05A-AZEI1(01)'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=PI'.
+    PERFORM bdc_dynpro      USING 'SAPMF05A' '0302'.
+    PERFORM bdc_field       USING 'BDC_CURSOR'
+                                  'BSEG-SGTXT'.
+    PERFORM bdc_field       USING 'BDC_OKCODE'
+                                  '=BU'.
+    PERFORM bdc_field       USING 'BSEG-SGTXT'
+                                  gs_exl-text."'TEST MEZA'.  "Text
+*  PERFORM bdc_transaction USING 'F-44'.
+*    REFRESH: lt_messtab.
+    CALL TRANSACTION 'F-44' USING lt_bdcdata
+                     MODE   lc_n
+                     UPDATE lc_a
+                     MESSAGES INTO lt_messtab.
+
+    IF line_exists( lt_messtab[ msgid = 'F5' msgnr = '312' ] ).
+
+      DATA(lv_clr_doc) = lt_messtab[ msgid = 'F5' msgnr = '312' ]-msgv1.
+
+      READ TABLE lt_messtab ASSIGNING FIELD-SYMBOL(<fs_msg>) WITH KEY msgid = 'F5' msgnr = '312' .
+
+      MOVE-CORRESPONDING gs_exl to gs_final.
+      gs_final-status = gs_final-status = 'Document Cleared'.
+      gs_final-clear_doc = lv_clr_doc.
+
+      APPEND gs_final TO gt_final.
+
+    ELSE.
+
+      MOVE-CORRESPONDING gs_exl to gs_final.
+      gs_final-status = 'Document Not Cleared'.
+
+      APPEND gs_final TO gt_final.
+
+
+    ENDIF.
+
+  ENDLOOP.
+
+ENDFORM.
+
+FORM bdc_dynpro USING program dynpro.
+  CLEAR ls_bdcdata.
+  ls_bdcdata-program  = program.
+  ls_bdcdata-dynpro   = dynpro.
+  ls_bdcdata-dynbegin = 'X'.
+  APPEND ls_bdcdata TO lt_bdcdata.
+ENDFORM.
+
+FORM bdc_field USING fnam fval.
+  CLEAR ls_bdcdata.
+  ls_bdcdata-fnam = fnam.
+  ls_bdcdata-fval = fval.
+  APPEND ls_bdcdata TO lt_bdcdata.
+ENDFORM.
+
+
+FORM display_alv .
+
+  ls_fieldcat-col_pos = '1'.
+  ls_fieldcat-fieldname = 'vendor'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Vendor'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '2'.
+  ls_fieldcat-fieldname = 'clear_date'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Clearing Date'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '3'.
+  ls_fieldcat-fieldname = 'doc1'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Docuent No. 1'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '4'.
+  ls_fieldcat-fieldname = 'doc2'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Docuent No. 2'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+  ls_fieldcat-col_pos = '5'.
+  ls_fieldcat-fieldname = 'clear_doc'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Clearing Doc'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+    ls_fieldcat-col_pos = '6'.
+  ls_fieldcat-fieldname = 'status'.
+  ls_fieldcat-tabname = 'gt_final'. "Internal Table containg all the data
+  ls_fieldcat-seltext_l = 'Status'.
+  APPEND ls_fieldcat TO lt_fieldcat.
+  CLEAR ls_fieldcat.
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK                 = ' '
+*     I_BYPASSING_BUFFER                = ' '
+*     I_BUFFER_ACTIVE                   = ' '
+*     I_CALLBACK_PROGRAM                = ' '
+*     I_CALLBACK_PF_STATUS_SET          = ' '
+*     I_CALLBACK_USER_COMMAND           = ' '
+*     I_CALLBACK_TOP_OF_PAGE            = ' '
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME                  =
+*     I_BACKGROUND_ID                   = ' '
+*     I_GRID_TITLE  =
+*     I_GRID_SETTINGS                   =
+*     IS_LAYOUT     =
+      it_fieldcat   = lt_fieldcat
+*     IT_EXCLUDING  =
+*     IT_SPECIAL_GROUPS                 =
+*     IT_SORT       =
+*     IT_FILTER     =
+*     IS_SEL_HIDE   =
+*     I_DEFAULT     = 'X'
+*     I_SAVE        = ' '
+*     IS_VARIANT    =
+*     IT_EVENTS     =
+*     IT_EVENT_EXIT =
+*     IS_PRINT      =
+*     IS_REPREP_ID  =
+*     I_SCREEN_START_COLUMN             = 0
+*     I_SCREEN_START_LINE               = 0
+*     I_SCREEN_END_COLUMN               = 0
+*     I_SCREEN_END_LINE                 = 0
+*     I_HTML_HEIGHT_TOP                 = 0
+*     I_HTML_HEIGHT_END                 = 0
+*     IT_ALV_GRAPHICS                   =
+*     IT_HYPERLINK  =
+*     IT_ADD_FIELDCAT                   =
+*     IT_EXCEPT_QINFO                   =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER           =
+*     ES_EXIT_CAUSED_BY_USER            =
+    TABLES
+      t_outtab      = gt_final
+    EXCEPTIONS
+      program_error = 1
+      OTHERS        = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
   ENDIF.
 
 ENDFORM.
