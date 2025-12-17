@@ -1,0 +1,232 @@
+FORM trnsfr_kissflow .
+
+  TYPES:
+*==>Table Type for Updating Cost Center Master send_log
+    ty_t_zfi_cosmas_log TYPE TABLE OF zfi_cosmas_log WITH DEFAULT KEY .
+
+
+*==>Structure for Cost Center Master JSON format
+  TYPES:      BEGIN OF ty_s_json_cosmas,
+                name                    TYPE string,     "CSKSZ-KOSTL
+                cost_center             TYPE string,     "CSKSZ-KOSTL
+                cost_center_description TYPE string,     "CSKSZ-LTEXT
+                lock_actpcosts          TYPE string,     "CSKSZ-BKZKP
+                actl_sec_costs          TYPE string,     "CSKSZ-BKZKS
+                lock_act_rev            TYPE string,     "CSKSZ-BKZER
+                plan_pri_costs          TYPE string,     "CSKSZ-PKZKP
+                plan_secondary          TYPE string,     "CSKSZ-PKZKS
+                plan_revenues           TYPE string,     "CSKSZ-PKZER
+                commitment              TYPE string,     "CSKSZ-BKZOB
+              END OF ty_s_json_cosmas,
+
+              BEGIN OF ty_csks,
+                kostl TYPE csks-kostl,
+                "ltext TYPE csks-ltext,
+                bkzkp TYPE csks-bkzkp,
+                bkzks TYPE csks-bkzks,
+                bkzer TYPE csks-bkzer,
+                pkzkp TYPE csks-pkzkp,
+                pkzks TYPE csks-pkzks,
+                pkzer TYPE csks-pkzer,
+                bkzob TYPE csks-bkzob,
+              END OF ty_csks.
+
+
+  DATA: ls_cosmas TYPE ty_s_json_cosmas,
+        lt_cosmas TYPE TABLE OF ty_s_json_cosmas,
+        lt_csks   TYPE TABLE OF ty_csks.
+
+  DATA: lv_method  TYPE char4,
+        gv_key_id  TYPE string,
+        gv_key_sec TYPE string,
+        gv_url     TYPE string.
+
+*==>constants declaration
+  CONSTANTS gc_hd1 TYPE string VALUE 'X-access-key-id' ##NO_TEXT.
+  CONSTANTS gc_hd2 TYPE string VALUE 'X-Access-Key-Secret' ##NO_TEXT.
+  CONSTANTS gc_hd3 TYPE string VALUE 'Accept' ##NO_TEXT.
+  CONSTANTS gc_hd4 TYPE string VALUE 'content-Type' ##NO_TEXT.
+  CONSTANTS gc_hd3_value TYPE string VALUE '*/*' ##NO_TEXT.
+  CONSTANTS gc_hd4_value TYPE string VALUE 'application/json' ##NO_TEXT.
+  CONSTANTS gc_ks01 TYPE string VALUE 'KS01' ##NO_TEXT.
+  CONSTANTS gc_ks02 TYPE string VALUE 'KS02' ##NO_TEXT.
+  CONSTANTS gc_service TYPE string VALUE 'Cost Centre Dataset' ##NO_TEXT.
+  CONSTANTS gc_http_status TYPE string VALUE '~status_code' ##NO_TEXT.
+  CONSTANTS gc_status_reason TYPE string VALUE '~status_reason' ##NO_TEXT.
+  CONSTANTS gc_content_len TYPE string VALUE '~content-length' ##NO_TEXT.
+  CONSTANTS gc_location TYPE string VALUE 'location' ##NO_TEXT.
+  CONSTANTS gc_content_type TYPE string VALUE 'content-type' ##NO_TEXT.
+
+
+  SELECT kostl,bkzkp,bkzks,bkzer,pkzkp,pkzks,pkzer,bkzob
+    FROM csks
+    INTO TABLE @lt_csks
+    FOR ALL ENTRIES IN @t_data
+    WHERE kostl = @t_data-kostl.
+
+  lt_cosmas = VALUE #( FOR ls_csks IN lt_csks
+                       (   name = ls_csks-kostl
+                           cost_center = ls_csks-kostl
+                           "cost_center_description = ls_csks-ltext
+                           lock_actpcosts = ls_csks-bkzkp
+                           actl_sec_costs = ls_csks-bkzks
+                           lock_act_rev   = ls_csks-bkzer
+                           plan_pri_costs = ls_csks-pkzkp
+                           plan_secondary = ls_csks-pkzks
+                           plan_revenues  = ls_csks-pkzer
+                           commitment     = ls_csks-bkzob )
+                      ).
+
+  CLEAR: gv_key_id, gv_key_sec, gv_url.
+
+*==>Identify the system whether it is DEV, QAS or PRD and assign Access Key, Secret Key and URL according to the system
+  IF sy-sysid = 'DEV'. "gc_dev.
+    gv_key_id = 'Ak869e74d1-8bce-42a7-b6d2-d879ef929386'. "gc_key_id_dev.
+    gv_key_sec = 'WRDY33DuBnZO2R0uZkKrEXrmAqE-EFieRD6aTT7BXRfiJczsZ3wox0uMy78Cd4A-8DWVPBlOtekb7mtEI9wBg'. "gc_key_sec_dev.
+    gv_url  = 'https://zomato-dev.kissflow.com/dataset/2/AcfeLOXDy1LPJ_CP040/SAP_Cost_Centre_Master'. "gc_url_dev.
+
+  ELSEIF sy-sysid = 'QAS'. "gc_qas.
+    gv_key_id = 'Akf01b3166-b3a0-4c13-88dd-31d70b5d740b'. "gc_key_id_qas.
+    gv_key_sec = '8ogSUOgx9T1d0GoKEE9PSv4aT0QZmKuoyJG7XlKjJovbkec9PPl6HmiyFgpd4V4yL-qAzOz3UPVpcsEsopGBg'. "gc_key_sec_qas.
+    gv_url  = 'https://zomato-staging.kissflow.com/dataset/2/AcfeLOXDy1LPJ_CP041/SAP_Cost_Centre_Master'. "gc_url_qas.
+
+  ELSEIF sy-sysid = 'PRD'. "gc_prd.
+    gv_key_id = 'Ak5111a3fe-cbbf-4108-82fc-697cea37953b'. "gc_key_id_prd.
+    gv_key_sec = 'Q6uO1yYTuOYHWGT5plKjBazXqQSlEGTkquArhm9aXhhSuLodUyYMzoBE9AV8wdJT4ehNIjbS92LZ2h8Sj0yeDg'. "gc_key_sec_prd.
+    gv_url  = 'https://zomato.kissflow.com/dataset/2/AcfeLOXDy1LPJ_CP026/SAP_Cost_Centre_Master'. "gc_url_prd.
+  ENDIF.
+
+*==>preparing to send Cost Center Master
+  cl_http_client=>create_by_url(
+    EXPORTING
+      url                =     gv_url
+    IMPORTING
+      client             =     DATA(lo_http_client)
+    EXCEPTIONS
+      argument_not_found = 1
+      plugin_not_active  = 2
+      internal_error     = 3
+      OTHERS             = 4 ).
+  IF sy-subrc <> 0.
+*==>If exception is occured then close communication
+    lo_http_client->close( ).
+  ENDIF.
+
+*==>If lo_http_client is bound then only proceed further
+  CHECK lo_http_client IS BOUND.
+  DATA(lo_rest_client) = NEW cl_rest_http_client( io_http_client = lo_http_client ).
+
+*==>Set HTTP Protocol Version 1.0
+  lo_http_client->request->set_version( if_http_request=>co_protocol_version_1_0 ).
+
+*==>Check lo_http_client, lo_rest_client are bound then only proceed further
+  CHECK lo_http_client IS BOUND AND lo_rest_client IS BOUND.
+
+*==>Pass Source Structure to JSON Serializer for converting into JSON format
+  DATA(lo_json_serializer) = NEW cl_trex_json_serializer( lt_cosmas  ).
+
+*==>Check go_json_serializer is bound or not
+  CHECK lo_json_serializer IS BOUND.
+
+*==>Convert Source into JSON Format
+  lo_json_serializer->serialize( ).
+  DATA(lv_body) = lo_json_serializer->get_data( ).
+
+*==>Update the JSON Structure Field Names as per target
+  REPLACE ALL OCCURRENCES OF text-001 IN lv_body WITH text-011.
+  REPLACE ALL OCCURRENCES OF text-002 IN lv_body WITH text-012.
+  REPLACE ALL OCCURRENCES OF text-003 IN lv_body WITH text-013.
+  REPLACE ALL OCCURRENCES OF text-004 IN lv_body WITH text-014.
+  REPLACE ALL OCCURRENCES OF text-005 IN lv_body WITH text-015.
+  REPLACE ALL OCCURRENCES OF text-006 IN lv_body WITH text-016.
+  REPLACE ALL OCCURRENCES OF text-007 IN lv_body WITH text-017.
+  REPLACE ALL OCCURRENCES OF text-008 IN lv_body WITH text-018.
+  REPLACE ALL OCCURRENCES OF text-009 IN lv_body WITH text-019.
+  REPLACE ALL OCCURRENCES OF text-010 IN lv_body WITH text-020.
+
+*==>Create request entity
+  DATA(lo_request) = lo_rest_client->if_rest_client~create_request_entity( ).
+
+*==>Verify whether the lo_request is bound or not
+  CHECK lo_request IS BOUND.
+
+*==>Set Content type
+  lo_request->set_content_type(
+    EXPORTING
+      iv_media_type = if_rest_media_type=>gc_appl_json ).
+
+*==>get entity in Text Format
+  lo_request->set_string_data( iv_data = lv_body ).
+
+*==>Set Header Field for Access Key ID
+  lo_request->set_header_field(
+  EXPORTING
+    iv_name  = gc_hd1
+    iv_value = gv_key_id ).
+
+*==>Set Header Field for Access Key Secret
+  lo_request->set_header_field(
+    EXPORTING
+      iv_name  = gc_hd2
+      iv_value = gv_key_sec ).
+
+*==>Set Header Field for Accept
+  lo_request->set_header_field(
+    EXPORTING
+      iv_name  = gc_hd3
+      iv_value = gc_hd3_value ).
+
+*==>Set Header Field for Content Type
+  lo_request->set_header_field(
+    EXPORTING
+      iv_name  = gc_hd4
+      iv_value = gc_hd4_value ).
+
+*==>POST
+  TRY.
+*==>POST
+      lo_rest_client->if_rest_resource~post( lo_request ).
+      lv_method = text-pos.
+    CATCH cx_rest_client_exception.
+  ENDTRY.
+
+*==>Collect POST/PUT method response
+  DATA(lo_response) = lo_rest_client->if_rest_client~get_response_entity( ).
+  DATA(lv_http_status) = lo_response->get_header_field( gc_http_status ).
+  DATA(lv_reason) = lo_response->get_header_field( gc_status_reason ).
+  DATA(lv_content_length) = lo_response->get_header_field( gc_content_len ).
+  DATA(lv_location) = lo_response->get_header_field( gc_location ).
+  DATA(lv_content_type) = lo_response->get_header_field( gc_content_type ).
+  DATA(lv_response) = lo_response->get_string_data( ).
+
+*==>append send log to internal table
+  DATA(lt_zfi_cosmas_log) = VALUE ty_t_zfi_cosmas_log( (
+                     mandt       = sy-mandt
+                     datum       = sy-datum
+                     uzeit       = sy-uzeit
+                     service     = gc_service
+                     method      = lv_method
+                     request     = lv_body
+                     response    = lv_response
+                     http_status = lv_http_status
+                     reason      = lv_reason ) ).
+
+
+*==>Update Kissflow Send Log
+*==>Call FM DB_INSERT_TABLE for updating the send log into Custom Table ZFI_COSMAS_LOG
+  CALL FUNCTION 'DB_INSERT_TABLE'
+    EXPORTING
+      tablename      = 'ZFI_COSMAS_LOG'
+    TABLES
+      inttab         = lt_zfi_cosmas_log
+    EXCEPTIONS
+      db_error       = 1
+      duplicate_key  = 2
+      wrong_param    = 3
+      internal_error = 4
+      OTHERS         = 5.
+  IF sy-subrc = 0.
+  ELSE.
+  ENDIF.
+
+ENDFORM.
