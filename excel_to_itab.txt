@@ -63,3 +63,54 @@ START-OF-SELECTION.
   ENDLOOP.
 
   cl_demo_output=>display( lt_final ).
+
+
+****************************************************************
+TYPES: BEGIN OF ty_exl,
+         assetmaino TYPE string,
+         tran_dat   TYPE string,
+         text       TYPE string,
+       END OF ty_exl.
+
+DATA: gt_exl     TYPE TABLE OF ty_exl,
+      gs_input   TYPE ty_exl.
+
+DATA: l_file_w      TYPE string,
+        lt_excel_data TYPE TABLE OF alsmex_tabline,
+        it_index      TYPE i,
+        col_start     TYPE i VALUE 1,
+        row_start     TYPE i VALUE 2,
+        col_end       TYPE i VALUE 256,
+        row_end       TYPE i VALUE 65000,
+        lv_timestamp  TYPE timestamp,
+        lv_tstr       TYPE string.
+
+CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    EXPORTING
+      filename                = p_file
+      i_begin_col             = col_start
+      i_begin_row             = row_start
+      i_end_col               = col_end
+      i_end_row               = row_end
+    TABLES
+      intern                  = lt_excel_data
+    EXCEPTIONS
+      inconsistent_parameters = 1
+      upload_ole              = 2
+      OTHERS                  = 3.
+  IF sy-subrc NE 0.
+    WRITE : / 'File Error'.
+    EXIT.
+  ENDIF.
+
+  LOOP AT lt_excel_data INTO DATA(ls_excel).
+    TRANSLATE ls_excel TO UPPER CASE .
+    MOVE ls_excel-col TO it_index.
+    ASSIGN COMPONENT it_index OF STRUCTURE gs_input TO FIELD-SYMBOL(<fs>) .
+    MOVE ls_excel-value TO <fs>.
+    AT END OF row.
+      APPEND gs_input TO gt_exl.
+      CLEAR gs_input.
+    ENDAT.
+  ENDLOOP.
+
