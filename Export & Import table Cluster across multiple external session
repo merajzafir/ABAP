@@ -1,0 +1,8 @@
+GET TIME STAMP FIELD lv_timestamp.
+lv_tstr = CONV #( lv_timestamp ) .
+lv_guid = |{ lv_tstr }| & |-| & |{ SY-UNAME }|.
+EXPORT lt_var = gt_exl  TO DATABASE indx(zy) ID lv_guid.
+
+____________________________________________________________________________________
+
+IMPORT lt_var = gt_exl FROM DATABASE indx(zy) ID p_guid.
