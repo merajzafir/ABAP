@@ -6,3 +6,7 @@ EXPORT lt_var = gt_exl  TO DATABASE indx(zy) ID lv_guid.
 ____________________________________________________________________________________
 
 IMPORT lt_var = gt_exl FROM DATABASE indx(zy) ID p_guid.
+
+
+
+DELETE FROM DATABASE indx(zy) ID p_guid.
