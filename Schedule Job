@@ -1,0 +1,28 @@
+DATA :lv_jobcount TYPE btcjobcnt,
+        lv_jobname  TYPE tbtcjob-jobname,
+        lt_tab      TYPE STANDARD TABLE OF zfi_asset_po_inv,
+        ls_tab      TYPE zfi_asset_po_inv.
+
+
+  lv_jobname = |ZFI_PREV_YR_ASSET_JOB_{ sy-uzeit }|.
+
+  " Initiate job .
+  CALL FUNCTION 'JOB_OPEN'
+    EXPORTING
+      jobname  = lv_jobname
+    IMPORTING
+      jobcount = lv_jobcount
+    EXCEPTIONS
+      OTHERS   = 1.
+
+  SUBMIT zfi_prev_yr_fixed_asset WITH p_guid = lv_guid WITH p_job = lv_jobname   VIA JOB lv_jobname NUMBER lv_jobcount AND RETURN.
+
+  CALL FUNCTION 'JOB_CLOSE'
+    EXPORTING
+      jobname   = lv_jobname
+      jobcount  = lv_jobcount
+      strtimmed = 'X'
+    EXCEPTIONS
+      OTHERS    = 1.
+
+  MESSAGE lv_jobname TYPE 'S'.
