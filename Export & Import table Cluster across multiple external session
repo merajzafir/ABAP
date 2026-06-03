@@ -1,12 +1,14 @@
+Data lv_guid TYPE char22.
+
 GET TIME STAMP FIELD lv_timestamp.
 lv_tstr = CONV #( lv_timestamp ) .
 lv_guid = |{ lv_tstr }| & |-| & |{ SY-UNAME }|.
 EXPORT lt_var = gt_exl  TO DATABASE indx(zy) ID lv_guid.
 
 ____________________________________________________________________________________
+parameter: p_guid TYPE char22 NO-DISPLAY.
 
 IMPORT lt_var = gt_exl FROM DATABASE indx(zy) ID p_guid.
-
 
 
 DELETE FROM DATABASE indx(zy) ID p_guid.
