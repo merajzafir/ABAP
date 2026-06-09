@@ -1,0 +1,50 @@
+REPORT z_r_data_extrct_al11.
+
+DATA: lt_data     TYPE REF TO data,
+      lo_data     TYPE REF TO data,
+      lt_metadata TYPE TABLE OF cl_salv_bs_runtime_info=>s_type_metadata,
+      ls_metadata TYPE cl_salv_bs_runtime_info=>s_type_metadata.
+
+
+START-OF-SELECTION.
+
+  " Tell the SALV framework to capture the data instead of displaying ALV
+  cl_salv_bs_runtime_info=>set(
+    EXPORTING
+      display  = abap_false
+      metadata = abap_true
+      data     = abap_true ).
+
+
+  " Submit FBL1N (program RFITEMAP) with your variant
+  SUBMIT rfitemap
+    USING SELECTION-SET '7010_MZ1'   " Your saved variant
+    AND RETURN.
+
+
+  cl_salv_bs_runtime_info=>set(
+    EXPORTING
+      display        = abap_false
+      metadata       = abap_false
+      data           = abap_true
+  ).
+
+
+  " Get the data back
+  TRY.
+      cl_salv_bs_runtime_info=>get_data_ref(
+        IMPORTING
+          r_data = lt_data ).
+
+      ASSIGN lt_data->* TO FIELD-SYMBOL(<lt_output>).
+
+      " Optional: Get metadata (field catalog, etc.)
+      ls_metadata = cl_salv_bs_runtime_info=>get_metadata( ).
+
+    CATCH cx_salv_bs_sc_runtime_info INTO DATA(lx_error).
+      " Handle error
+      MESSAGE lx_error->get_text( ) TYPE 'E'.
+  ENDTRY.
+
+  " Clear the runtime info
+  cl_salv_bs_runtime_info=>clear_all( ).
