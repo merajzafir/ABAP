@@ -1,4 +1,46 @@
-  METHOD /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+METHOD /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+
+    DATA: BEGIN OF ty_deep.
+            INCLUDE TYPE ycl_y_test_deep_mpc=>ts_test_hdr.
+    DATA: headtoitem TYPE ycl_y_test_deep_mpc=>tt_test_item,
+          END OF ty_deep.
+
+
+    DATA ls_deep LIKE ty_deep.
+
+    io_data_provider->read_entry_data(
+      IMPORTING
+        es_data                      = ls_deep
+    ).
+
+    DATA: lo_struct_desc TYPE REF TO cl_abap_structdescr.
+
+    " Get the description of the structure
+    lo_struct_desc ?= cl_abap_typedescr=>describe_by_data( ls_deep ).
+
+    " Check if the component exists in the component table
+    READ TABLE lo_struct_desc->get_components( )
+         WITH KEY name = 'HEADTOITEM'
+         TRANSPORTING NO FIELDS.
+
+    IF sy-subrc = 0.
+      " Logic for when field exists
+    ENDIF.
+
+
+    copy_data_to_ref(
+      EXPORTING
+        is_data = ls_deep
+      CHANGING
+        cr_data = er_deep_entity
+    ).
+
+
+  ENDMETHOD.
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+METHOD /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
 
     " Deep Structure
     DATA: BEGIN OF deep_str.
