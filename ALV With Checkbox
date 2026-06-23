@@ -1,0 +1,191 @@
+TYPES: BEGIN OF ty_data,
+         sel       TYPE char1,  "<-- Selection checkbox
+         bukrs     TYPE bukrs,
+         belnr     TYPE XBLNR1, " Ref Invoice Number
+         vblnr     TYPE VBLNR,  " Payment document no.
+         gjahr     TYPE gjahr,
+         bldat     TYPE bldat,  "Invoice Date
+         inv_ddat  TYPE dzfbdt, "Invoice Due Date
+         blart     TYPE blart,
+         dmbtr     TYPE dmbtr,  "Invoice Amount
+         dmbtr_d   TYPE dmbtr,  "Disbursal Amount
+         lifnr     TYPE lifnr,  "Seller/Buyer Code
+         bschl     TYPE bschl,
+         zlsch     TYPE schzw_bseg,
+         erp_ref   TYPE string, "ERP Reference No
+         add_info1 TYPE string, "Additional info1
+         add_info2 TYPE string, "Additional info2
+       END OF ty_data.
+
+DATA : lt_data TYPE TABLE OF ty_data,
+       ls_data TYPE ty_data.
+
+*&---------------------------------------------------------------------*
+*&      Form  BUILD_FIELDCATALOG
+*&---------------------------------------------------------------------*
+FORM build_fieldcatalog .
+
+  CLEAR wa_fieldcat.
+  wa_fieldcat-fieldname   = 'sel'.
+  wa_fieldcat-seltext_m   = 'Check'.
+  wa_fieldcat-col_pos     = 1.
+  wa_fieldcat-checkbox    = 'X'.     " Display as checkbox
+  wa_fieldcat-edit        = 'X'.     " Editable
+*  wa_fieldcat-key         = ' '.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'lifnr'.
+  wa_fieldcat-seltext_m   = 'Vendor Code'.
+  wa_fieldcat-col_pos     = 2.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'dmbtr'.
+  wa_fieldcat-seltext_m   = 'Invoice Amount'.
+  wa_fieldcat-col_pos     = 3.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'belnr'.
+  wa_fieldcat-seltext_m   = 'Invoice Number'.
+  wa_fieldcat-col_pos     = 4.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'bldat'.
+  wa_fieldcat-seltext_m   = 'Invoice Date'.
+  wa_fieldcat-col_pos     = 5.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'inv_ddat'.
+  wa_fieldcat-seltext_m   = 'Invoice Due Date'.
+  wa_fieldcat-col_pos     = 6.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'dmbtr_d'.
+  wa_fieldcat-seltext_m   = 'Disbursal Amount'.
+  wa_fieldcat-col_pos     = 7.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'erp_ref'.
+  wa_fieldcat-seltext_m   = 'ERP Reference No'.
+  wa_fieldcat-col_pos     = 8.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'add_info1'.
+  wa_fieldcat-seltext_m   = 'Additional info1'.
+  wa_fieldcat-col_pos     = 9.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+  wa_fieldcat-fieldname   = 'add_info2'.
+  wa_fieldcat-seltext_m   = 'Additional info2'.
+  wa_fieldcat-col_pos     = 10.
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_ALV_REPORT
+*&---------------------------------------------------------------------*
+FORM display_alv_report .
+
+  DATA:is_layout TYPE slis_layout_alv.
+
+
+  is_layout-colwidth_optimize = 'X'.
+  is_layout-box_fieldname = 'SEL'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USER_COMMAND'
+      is_layout                = is_layout
+      it_fieldcat              = it_fieldcat
+      i_save                   = 'X'
+    TABLES
+      t_outtab                 = lt_data
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+
+ENDFORM.
+
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+
+  SET PF-STATUS 'ZPF_STATUS' OF PROGRAM sy-repid.
+
+  CALL FUNCTION 'GET_GLOBALS_FROM_SLVC_FULLSCR'
+    IMPORTING
+      e_grid = lo_grid.
+
+ENDFORM.
+
+
+FORM user_command USING r_ucomm LIKE sy-ucomm
+                  rs_selfield TYPE slis_selfield.
+
+  DATA: "lo_grid       TYPE REF TO cl_gui_alv_grid,
+    lt_index_rows TYPE lvc_t_row,     " Selected Row Indexes
+    ls_index_row  TYPE lvc_s_row.
+
+  CASE r_ucomm.
+
+    WHEN 'SELAL'.
+
+      IF lo_grid IS NOT INITIAL.
+        CALL METHOD lo_grid->check_changed_data.
+      ENDIF.
+
+      rs_selfield-refresh = 'X'.
+
+      LOOP AT lt_data INTO ls_data.
+        ls_data-sel = 'X'.
+        MODIFY lt_data FROM ls_data.
+      ENDLOOP.
+
+    WHEN 'DESEL'.
+
+      IF lo_grid IS NOT INITIAL.
+        CALL METHOD lo_grid->check_changed_data.
+      ENDIF.
+
+      rs_selfield-refresh = 'X'.
+
+      LOOP AT lt_data INTO ls_data.
+        ls_data-sel = ' '.
+        MODIFY lt_data FROM ls_data.
+      ENDLOOP.
+
+    WHEN 'SENDDATA'.
+
+*      CALL FUNCTION 'GET_GLOBALS_FROM_SLVC_FULLSCR'
+*        IMPORTING
+*          e_grid = lo_grid.
+*
+      IF lo_grid IS NOT INITIAL.
+
+        CALL METHOD lo_grid->check_changed_data.
+
+        rs_selfield-refresh = 'X'.
+
+      ENDIF.
+
+      READ TABLE lt_data WITH KEY sel = 'X' TRANSPORTING NO FIELDS.
+      IF sy-subrc = 4.
+        MESSAGE 'Please Select Atleast 1 Row' TYPE 'E'.
+      ENDIF.
+
+      PERFORM send_data.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
