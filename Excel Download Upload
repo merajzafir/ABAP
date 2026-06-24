@@ -1,0 +1,219 @@
+REPORT zfi_brs_table_update_prgm.
+
+TYPES: BEGIN OF ty_exl,
+         bukrs  TYPE string,
+         bankl  TYPE string,
+         bankn  TYPE string,
+         tdate  TYPE string,
+         amount TYPE string,
+       END OF ty_exl.
+
+DATA : gt_exl   TYPE TABLE OF ty_exl,
+       gs_exl   TYPE          ty_exl,
+       gs_input TYPE ty_exl.
+
+TYPES: BEGIN OF ty_alv,
+         bukrs  TYPE string,
+         bankl  TYPE string,
+         bankn  TYPE string,
+         tdate  TYPE string,
+         amount TYPE string,
+       END OF ty_alv.
+
+DATA: gt_final TYPE TABLE OF ty_alv,
+      gs_final TYPE ty_alv.
+
+DATA : lt_fieldcat TYPE slis_t_fieldcat_alv,
+       ls_fieldcat TYPE slis_fieldcat_alv.
+
+DATA ls_layout TYPE slis_layout_alv.
+
+SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+
+PARAMETERS: rb_dwnld RADIOBUTTON GROUP rg1 DEFAULT 'X' USER-COMMAND uc1,
+            rb_upld  RADIOBUTTON GROUP rg1.
+
+SELECTION-SCREEN: END OF BLOCK b1.
+
+SELECTION-SCREEN: BEGIN OF BLOCK b2 WITH FRAME.
+
+PARAMETERS: p_file TYPE rlgrap-filename MODIF ID mod.
+
+SELECTION-SCREEN: END OF BLOCK b2.
+
+AT SELECTION-SCREEN OUTPUT.
+
+  LOOP AT SCREEN.
+    IF rb_upld = 'X'.
+      IF screen-group1 = 'MOD'.
+        screen-active = 1.  " Visible and active
+      ENDIF.
+    ELSE.
+      IF screen-group1 = 'MOD'.
+        screen-active = 0.  " Hidden
+      ENDIF.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+
+  CALL FUNCTION 'F4_FILENAME'     "This FM gives the pop-up of the file explorer and returns the path of the chosen file.
+    EXPORTING
+      program_name  = syst-cprog
+      dynpro_number = syst-dynnr
+      field_name    = ' '
+    IMPORTING
+      file_name     = p_file.
+
+
+START-OF-SELECTION.
+
+  CASE abap_true.
+    WHEN rb_dwnld.
+      PERFORM download_format.
+
+    WHEN rb_upld.
+      PERFORM upload_data.
+      PERFORM insert_data.
+
+  ENDCASE.
+
+*&---------------------------------------------------------------------*
+*&      Form  DOWNLOAD_FORMAT
+*&---------------------------------------------------------------------*
+FORM download_format .
+
+  DATA : gs_download TYPE ty_exl,
+         l_file_w    TYPE string,
+         gt_download TYPE STANDARD TABLE OF ty_exl.
+
+
+  CALL METHOD cl_gui_frontend_services=>directory_browse
+    CHANGING
+      selected_folder      = l_file_w
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      not_supported_by_gui = 3
+      OTHERS               = 4.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+  CONCATENATE l_file_w '\BRS_Table_Upl' '_' sy-datum '.xls' INTO l_file_w.
+
+  gs_download-bukrs   = 'Company Code'.
+  gs_download-bankl   = 'Bank Keys'.
+  gs_download-bankn   = 'Bank account number'.
+  gs_download-tdate   = 'Last Date Of Month(YYYYMMDD)'.
+  gs_download-amount  = 'Closing Balance'.
+
+  APPEND gs_download TO gt_download.
+
+  CALL METHOD cl_gui_frontend_services=>gui_download
+    EXPORTING
+      filename                = l_file_w
+      write_field_separator   = 'X'
+    CHANGING
+      data_tab                = gt_download
+    EXCEPTIONS
+      file_write_error        = 1
+      no_batch                = 2
+      gui_refuse_filetransfer = 3
+      invalid_type            = 4
+      no_authority            = 5
+      unknown_error           = 6
+      header_not_allowed      = 7
+      separator_not_allowed   = 8
+      filesize_not_allowed    = 9
+      header_too_long         = 10
+      dp_error_create         = 11
+      dp_error_send           = 12
+      dp_error_write          = 13
+      unknown_dp_error        = 14
+      access_denied           = 15
+      dp_out_of_memory        = 16
+      disk_full               = 17
+      dp_timeout              = 18
+      file_not_found          = 19
+      dataprovider_exception  = 20
+      control_flush_error     = 21
+      not_supported_by_gui    = 22
+      error_no_gui            = 23
+      OTHERS                  = 24.
+  IF sy-subrc EQ 0.
+    MESSAGE 'File Downloaded Successfully' TYPE 'S' DISPLAY LIKE 'S'.
+    LEAVE LIST-PROCESSING.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  UPLOAD_DATA
+*&---------------------------------------------------------------------*
+FORM upload_data .
+
+  DATA: l_file_w      TYPE string,
+        lt_excel_data TYPE TABLE OF alsmex_tabline,
+        it_index      TYPE i,
+        col_start     TYPE i VALUE 1,
+        row_start     TYPE i VALUE 2,
+        col_end       TYPE i VALUE 256,
+        row_end       TYPE i VALUE 65000,
+        lv_timestamp  TYPE timestamp,
+        lv_tstr       TYPE string.
+
+  CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    EXPORTING
+      filename                = p_file
+      i_begin_col             = col_start
+      i_begin_row             = row_start
+      i_end_col               = col_end
+      i_end_row               = row_end
+    TABLES
+      intern                  = lt_excel_data
+    EXCEPTIONS
+      inconsistent_parameters = 1
+      upload_ole              = 2
+      OTHERS                  = 3.
+  IF sy-subrc NE 0.
+    WRITE : / 'File Error'.
+    EXIT.
+  ENDIF.
+
+  LOOP AT lt_excel_data INTO DATA(ls_excel).
+    TRANSLATE ls_excel TO UPPER CASE .
+    MOVE ls_excel-col TO it_index.
+    ASSIGN COMPONENT it_index OF STRUCTURE gs_input TO FIELD-SYMBOL(<fs>) .
+    MOVE ls_excel-value TO <fs>.
+    AT END OF row.
+      APPEND gs_input TO gt_exl.
+      CLEAR gs_input.
+    ENDAT.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INSERT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM insert_data .
+
+  DATA: lt_bank_data TYPE  TABLE OF zfi_bank_cl_st.
+
+  MOVE-CORRESPONDING gt_exl TO lt_bank_data.
+
+  INSERT zfi_bank_cl_st FROM TABLE lt_bank_data.
+  IF sy-subrc = 0.
+    COMMIT WORK.
+    MESSAGE 'Data inserted successfully!' TYPE 'S'.
+  ELSE.
+    ROLLBACK WORK.
+    MESSAGE 'Error while inserting data!' TYPE 'E'.
+  ENDIF.
+
+ENDFORM.
