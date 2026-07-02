@@ -1,0 +1,216 @@
+TYPES: BEGIN OF ty_kostl,
+           cost_center TYPE kostl,
+         END OF ty_kostl.
+
+  DATA: BEGIN OF ty_deep_tran.
+          INCLUDE TYPE zcl_zai_interface_mpc=>ts_entity_ai_transfer.
+  DATA: aitosaptransfer TYPE zcl_zai_interface_mpc=>tt_ai_transfer,
+        END OF ty_deep_tran.
+
+  DATA : ls_deep_tran LIKE ty_deep_tran,
+         lt_ai_tran   TYPE zcl_zai_interface_mpc=>tt_ai_transfer,
+         ls_ai_tran   TYPE zcl_zai_interface_mpc=>ts_ai_transfer,
+         lt_kostl     TYPE TABLE OF ty_kostl.
+
+  DATA : lv_host   TYPE string,
+         lv_length TYPE string.
+
+  DATA : gc_http_status   TYPE string VALUE '~status_code',
+         gc_status_reason TYPE string VALUE '~status_reason',
+         gc_content_len   TYPE string VALUE '~content-length',
+         gc_location      TYPE string VALUE 'location',
+         gc_content_type  TYPE string VALUE 'content-type'.
+
+  DATA: gv_url     TYPE string VALUE 'https://api.assetinfinity.IO/api/UpdateAssetSAPCode'.
+
+
+  SELECT * FROM zfi_ai_trans_tb2
+  INTO TABLE @DATA(lt_transfer)
+  WHERE process_code EQ '02'.
+
+  IF lt_transfer IS NOT INITIAL.
+
+    MOVE-CORRESPONDING lt_transfer TO lt_kostl.
+
+    ls_deep_tran-comp_code = lt_transfer[ 1 ]-comp_code.
+
+    LOOP AT lt_transfer INTO DATA(ls_transfer).
+
+      CLEAR ls_ai_tran.
+
+      ls_ai_tran-assetmaino = ls_transfer-assetmaino.
+      ls_ai_tran-comp_code = ls_transfer-comp_code.
+      ls_ai_tran-tran_dat = ls_transfer-tran_dat.
+      ls_ai_tran-cost_center = ls_transfer-cost_center.
+      ls_ai_tran-text = ls_transfer-text.
+      ls_ai_tran-newsapassetcode = ls_transfer-asset_new.
+      APPEND ls_ai_tran TO lt_ai_tran.
+
+      MOVE-CORRESPONDING lt_ai_tran TO ls_deep_tran-aitosaptransfer.
+
+    ENDLOOP.
+
+*==>preparing to send
+    cl_http_client=>create_by_url(
+      EXPORTING
+        url                =     gv_url
+      IMPORTING
+        client             =     DATA(lo_http_client)
+      EXCEPTIONS
+        argument_not_found = 1
+        plugin_not_active  = 2
+        internal_error     = 3
+        OTHERS             = 4 ).
+    IF sy-subrc <> 0.
+*==>If exception is occured then close communication
+      lo_http_client->close( ).
+    ENDIF.
+
+*==>If lo_http_client is bound then only proceed further
+    CHECK lo_http_client IS BOUND.
+
+    DATA(lo_rest_client) = NEW cl_rest_http_client( io_http_client = lo_http_client ).
+
+*==>Set HTTP Protocol Version 1.0
+    lo_http_client->request->set_version( if_http_request=>co_protocol_version_1_0 ).
+
+*==>Check lo_http_client, lo_rest_client are bound then only proceed further
+    CHECK lo_http_client IS BOUND AND lo_rest_client IS BOUND.
+
+*==>Pass Source Structure to JSON Serializer for converting into JSON format
+    DATA(lo_json_serializer) = NEW cl_trex_json_serializer( ls_deep_tran  ).
+
+*==>Check go_json_serializer is bound or not
+    CHECK lo_json_serializer IS BOUND.
+
+*==>Convert Source into JSON Format
+    lo_json_serializer->serialize( ).
+    DATA(lv_body) = lo_json_serializer->get_data( ).
+
+*==>Update the JSON Structure Field Names as per target
+    REPLACE ALL OCCURRENCES OF 'comp_code:' IN lv_body WITH '"entityCode":'.
+    REPLACE ALL OCCURRENCES OF 'aitosaptransfer:' IN lv_body WITH '"AItoSAPTransfer":'.
+    REPLACE ALL OCCURRENCES OF 'text:' IN lv_body WITH '"status":'.
+    REPLACE ALL OCCURRENCES OF 'assetmaino:' IN lv_body WITH '"sAPAssetCode":'.
+    REPLACE ALL OCCURRENCES OF 'cost_center:' IN lv_body WITH '"transferLoaction_CostCenter":'.
+    REPLACE ALL OCCURRENCES OF 'newsapassetcode:' IN lv_body WITH '"newSAPAssetCode":'.
+
+    CONDENSE lv_body NO-GAPS.
+
+    SORT lt_kostl BY cost_center.
+    DELETE ADJACENT DUPLICATES FROM lt_kostl COMPARING cost_center.
+
+    LOOP AT lt_kostl ASSIGNING FIELD-SYMBOL(<fs_kostl>).
+
+      DATA(lv_kostl) = <fs_kostl>-cost_center.
+      CONDENSE lv_kostl NO-GAPS.
+
+      REPLACE ALL OCCURRENCES OF lv_kostl IN lv_body WITH <fs_kostl>-cost_center.
+
+
+    ENDLOOP.
+
+    DATA(lo_request) = lo_rest_client->if_rest_client~create_request_entity( ).
+
+    CHECK lo_request IS BOUND.
+*==>Set Content type
+    lo_request->set_content_type( EXPORTING iv_media_type = if_rest_media_type=>gc_appl_json ).
+
+*==>get entity in Text Format
+    lo_request->set_string_data( iv_data = lv_body ).
+
+    CONCATENATE 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjMiLCJjb21wYW55IjoiUWF6b21hdG8iLCJlbWFpbCI6In'
+                'N1cHBvcnRAcGNzaW5maW5pdHkuaW4iLCJkYXRlRm9ybWF0IjoiZGQvTU0veXl5eSBoaDptbSB0dCIsInRpbWVab25lIjoiSW5kaWEgU3RhbmRh'
+                'cmQgVGltZSIsImRldmljZUlkIjoiNTE4MTYxOTctMzM3Ny00NDg0LWNhODUtMTYxMmQwZjc2MDVkIiwidXNlclR5cGVJZCI6IjUiLCJuYmYiOjE'
+                '3ODE3NzU2MjksImV4cCI6MTkzOTQ1NTkyOSwiaWF0IjoxNzgxNzc1NjI5LCJpc3MiOiJBc3NldCBJbmZpbml0eSIsImF1ZCI6ImFzc2V0aW5maW'
+                '5pdHktY2xpZW50cyJ9.h6FPriW13MBZcHL2g_9fOxhwfxqy7-dk0oHNUhaxt1pA1ZqiDYYczvd6otDfNmdZmkkJccpEOENrMf1N2FRdfotK-DN2'
+                '2rxKP7QvQ-vxnPSY0ng_WzhNY7OsUiW5YXGeyXPgr4_KjR-kSJonCc_9lTIBymiKbbyB79f7dcsU6Hbj0lgDZUeHPXHqNIu-G70Xt6tZl5IyNlz'
+                'cSCZrWCt-lfMo98jpLgLT8Ffu8-EhUN0cuiWd9YDzlEucqaRNhJEHmRVLTXr_CRgSsfkbTLMPFx7lGInsEQ-i6D8kQxr5hSNz1riRf7mMqwYmP7'
+                'vl2Xi0PnvSP9lDTF3RVtE3KqJU0g'
+           INTO DATA(lv_auth).
+
+*==>Set Header Field for Authorization
+    lo_request->set_header_field( EXPORTING iv_name  = 'Authorization' iv_value = lv_auth ).
+
+*==>Set Header Field for Content Type
+    lo_request->set_header_field( EXPORTING iv_name  = 'content-Type' iv_value = 'application/json' ).
+
+*==>Set Header Field for Accept
+    lo_request->set_header_field( EXPORTING iv_name  = 'Accept' iv_value = '*/*' ).
+
+    " Set Content-Length manually
+    lv_length = strlen( lv_body ).
+    lo_request->set_header_field( EXPORTING iv_name = 'Content-Length' iv_value = lv_length ).
+
+    TRY.
+*==>Post
+        lo_rest_client->if_rest_resource~post( lo_request ).
+      CATCH cx_rest_client_exception.
+    ENDTRY.
+
+*==>Collect POST method response
+    DATA(lo_response)             = lo_rest_client->if_rest_client~get_response_entity( ).
+    DATA(lv_http_status)          = lo_response->get_header_field( gc_http_status ).
+    DATA(lv_reason)               = lo_response->get_header_field( gc_status_reason ).
+    DATA(lv_content_length)       = lo_response->get_header_field( gc_content_len ).
+    DATA(lv_location)             = lo_response->get_header_field( gc_location ).
+    DATA(lv_content_type)         = lo_response->get_header_field( gc_content_type ).
+    DATA(lv_response)             = lo_response->get_string_data( ).
+
+    DATA: lt_trans_log TYPE TABLE OF zfi_ai_trans_log,
+          ls_trans_log TYPE zfi_ai_trans_log,
+          lv_guid      TYPE guid_32.
+
+    CALL FUNCTION 'GUID_CREATE'
+      IMPORTING
+        ev_guid_32 = lv_guid.
+
+    IF lv_http_status = '200'.
+
+      LOOP AT lt_transfer ASSIGNING FIELD-SYMBOL(<fs_data>).
+
+        ls_trans_log-guid = lv_guid.
+        ls_trans_log-datum = sy-datum.
+        ls_trans_log-uzeit = sy-uzeit.
+        ls_trans_log-assetmaino = <fs_data>-assetmaino.
+        ls_trans_log-reason = lv_reason.
+        ls_trans_log-http_status = lv_http_status.
+        ls_trans_log-reason = lv_reason.
+        ls_trans_log-payload = lv_body.
+        ls_trans_log-response = lv_response.
+
+        APPEND ls_trans_log TO lt_trans_log.
+        CLEAR ls_trans_log.
+
+      ENDLOOP.
+
+      MODIFY zfi_ai_trans_log FROM TABLE lt_trans_log.
+      COMMIT WORK.
+
+    ELSE.
+
+      LOOP AT lt_transfer ASSIGNING <fs_data>.
+
+        ls_trans_log-guid = lv_guid.
+        ls_trans_log-datum = sy-datum.
+        ls_trans_log-uzeit = sy-uzeit.
+        ls_trans_log-assetmaino = <fs_data>-assetmaino.
+        ls_trans_log-reason = lv_response.
+        ls_trans_log-http_status = lv_http_status.
+        ls_trans_log-reason = lv_reason.
+        ls_trans_log-payload = lv_body.
+        ls_trans_log-response = lv_response.
+
+        APPEND ls_trans_log TO lt_trans_log.
+        CLEAR ls_trans_log.
+
+      ENDLOOP.
+
+      MODIFY zfi_ai_trans_log FROM TABLE lt_trans_log.
+      COMMIT WORK.
+
+    ENDIF.
+
+    CLEAR: lv_body, lv_guid, ls_deep_tran.
+
+  ENDIF.
